@@ -1,0 +1,34 @@
+.site-nav a {
+    white-space: nowrap;
+}
+
+@media (min-width: 992px) {
+    .header-actions {
+        gap: 1.25rem;
+    }
+
+    .hero-visual {
+        justify-self: end;
+    }
+}
+
+@media (max-width: 600px) {
+    .search-form {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row input,
+    .form-row select {
+        width: 100%;
+    }
+
+    .hero-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .card-panel {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}

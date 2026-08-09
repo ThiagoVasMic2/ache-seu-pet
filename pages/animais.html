@@ -1,0 +1,176 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Encontrar Animal | Ache Seu Pet</title>
+    <meta name="description" content="Busque casos de animais perdidos, encontrados e para adoção no Ache Seu Pet.">
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+    <header class="site-header">
+        <div class="container header-content">
+            <a href="../index.html" class="brand">
+                <img src="../assets/logo/Ache-seu-Pet-Logo.png" alt="Ache Seu Pet" class="brand-mark">
+                <div>
+                    <strong>ACHE SEU PET</strong>
+                    <span>Encontrar Animal</span>
+                </div>
+            </a>
+            <button class="nav-toggle" aria-label="Abrir menu">
+                <span></span><span></span><span></span>
+            </button>
+            <nav class="site-nav" aria-label="Menu principal">
+                <a href="../index.html">Início</a>
+                <a href="animais.html">Encontrar Animal</a>
+                <a href="cadastrar-animal.html">Cadastrar Animal</a>
+                <a href="mapa.html">Mapa</a>
+                <a href="resgate.html">Resgate</a>
+                <a href="adocao.html">Adoção</a>
+                <a href="parceiros.html">Parceiros</a>
+                <a href="sobre.html">Sobre</a>
+            </nav>
+            <div class="header-actions">
+                <a href="contato.html" class="button button-secondary">Entrar</a>
+                <a href="cadastrar-animal.html" class="button button-primary">Registrar ocorrência</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Encontrar Animal</span>
+                    <h2>Busque por tipos, situações e localização aproximada</h2>
+                </div>
+                <form class="search-form" id="animal-search-form" aria-label="Filtrar animais">
+                    <div class="form-row">
+                        <label for="filter-category">Categoria</label>
+                        <select id="filter-category" name="category" multiple size="5">
+                            <option value="domestico">Doméstico</option>
+                            <option value="silvestre">Silvestre</option>
+                            <option value="rural">Rural</option>
+                            <option value="exotico">Exótico</option>
+                            <option value="nao_identificado">Não identificado</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-class">Classe</label>
+                        <select id="filter-class" name="class" multiple size="5">
+                            <option value="mamifero">Mamífero</option>
+                            <option value="ave">Ave</option>
+                            <option value="reptil">Réptil</option>
+                            <option value="anfibio">Anfíbio</option>
+                            <option value="peixe">Peixe</option>
+                            <option value="invertebrado">Invertebrado</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-movement">Locomoção</label>
+                        <select id="filter-movement" name="movement" multiple size="5">
+                            <option value="terrestre">Terrestre</option>
+                            <option value="voa">Voa</option>
+                            <option value="aquatico">Aquático</option>
+                            <option value="semi_aquatico">Semi-aquático</option>
+                            <option value="arboricola">Arborícola</option>
+                            <option value="rasteja">Rasteja</option>
+                            <option value="salta">Salta</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-diet">Alimentação</label>
+                        <select id="filter-diet" name="diet" multiple size="5">
+                            <option value="carnivoro">Carnívoro</option>
+                            <option value="herbivoro">Herbívoro</option>
+                            <option value="onivoro">Onívoro</option>
+                            <option value="insetivoro">Insetívoro</option>
+                            <option value="detritivoro">Detritívoro</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-habitat">Habitat</label>
+                        <select id="filter-habitat" name="habitat" multiple size="5">
+                            <option value="urbano">Urbano</option>
+                            <option value="floresta">Floresta</option>
+                            <option value="rural">Rural</option>
+                            <option value="campo">Campo</option>
+                            <option value="rio">Rio</option>
+                            <option value="lago">Lago</option>
+                            <option value="mar">Mar</option>
+                            <option value="praia">Praia</option>
+                            <option value="ambiente_domestico">Ambiente doméstico</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-status">Situação</label>
+                        <select id="filter-status" name="status" multiple size="6">
+                            <option value="perdido">Perdido</option>
+                            <option value="encontrado">Encontrado</option>
+                            <option value="abandonado">Abandonado</option>
+                            <option value="resgate_solicitado">Resgate solicitado</option>
+                            <option value="resgatado">Resgatado</option>
+                            <option value="para_adocao">Para adoção</option>
+                            <option value="adotado">Adotado</option>
+                            <option value="reencontrado">Reencontrado</option>
+                            <option value="silvestre_avistado">Silvestre avistado</option>
+                            <option value="ferido">Ferido</option>
+                            <option value="encerrado">Encerrado</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-city">Cidade</label>
+                        <input type="text" id="filter-city" name="city" placeholder="Digite a cidade">
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-radius">Raio</label>
+                        <select id="filter-radius" name="radius">
+                            <option value="1">1 km</option>
+                            <option value="5" selected>5 km</option>
+                            <option value="10">10 km</option>
+                            <option value="25">25 km</option>
+                            <option value="50">50 km</option>
+                        </select>
+                    </div>
+                    <div class="form-row form-actions">
+                        <button type="submit" class="button button-primary">Buscar</button>
+                    </div>
+                </form>
+                <div class="section-heading" style="margin-top:2rem;">
+                    <h2>Resultados</h2>
+                </div>
+                <div class="animal-grid" id="animals-results"></div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-grid">
+            <div>
+                <a href="../index.html" class="brand-footer">
+                    <img src="../assets/logo/Ache-seu-Pet.png" alt="Ache Seu Pet" class="brand-mark-small">
+                    <span>ACHE SEU PET</span>
+                </a>
+                <p>Conectando pessoas, protegendo animais.</p>
+            </div>
+            <div class="footer-links">
+                <a href="animais.html">Encontrar animal</a>
+                <a href="cadastrar-animal.html">Registrar ocorrência</a>
+                <a href="adocao.html">Adoção</a>
+                <a href="resgate.html">Resgate</a>
+                <a href="parceiros.html">Parceiros</a>
+                <a href="sobre.html">Sobre</a>
+                <a href="contato.html">Contato</a>
+            </div>
+            <div class="footer-note">
+                <p>Em caso de emergência, procure os serviços públicos e profissionais responsáveis da sua região.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="../js/app.js"></script>
+    <script src="../js/animals.js"></script>
+</body>
+</html>
+
