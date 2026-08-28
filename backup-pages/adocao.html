@@ -1,10 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sobre | Ache Seu Pet</title>
-    <meta name="description" content="Saiba mais sobre a missão e os objetivos da plataforma Ache Seu Pet.">
+    <title>Adoção | Ache Seu Pet</title>
+    <meta name="description" content="Conheça animais disponíveis para adoção na plataforma Ache Seu Pet.">
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/responsive.css">
 </head>
@@ -15,7 +15,7 @@
                 <img src="../assets/logo/Ache-seu-Pet-Logo.png" alt="Ache Seu Pet" class="brand-mark">
                 <div>
                     <strong>ACHE SEU PET</strong>
-                    <span>Sobre a plataforma</span>
+                    <span>Encontre um novo amigo</span>
                 </div>
             </a>
             <button class="nav-toggle" aria-label="Abrir menu">
@@ -42,24 +42,32 @@
         <section class="section">
             <div class="container">
                 <div class="section-heading">
-                    <span class="eyebrow">Nossa missão</span>
-                    <h2>Conectar pessoas, proteger animais e facilitar resgates com segurança.</h2>
+                    <span class="eyebrow">Adoção</span>
+                    <h2>Conheça animais disponíveis para adoção</h2>
                 </div>
-                <p>O Ache Seu Pet é uma plataforma pensada para oferecer acesso rápido a ocorrências de animais perdidos, encontrados, em adoção e em resgate. Ele prioriza orientações responsáveis e a segurança de animais domésticos e silvestres.</p>
-                <div class="workflow-grid">
-                    <article class="workflow-card">
-                        <strong>Missão social</strong>
-                        <p>Promover proteção animal com um sistema acessível, inclusivo e de confiança.</p>
-                    </article>
-                    <article class="workflow-card">
-                        <strong>Futuro conectado</strong>
-                        <p>Arquitetura preparada para backend, autenticação e banco de dados.</p>
-                    </article>
-                    <article class="workflow-card">
-                        <strong>Privacidade</strong>
-                        <p>Localização aproximada de ocorrências sem expor dados pessoais sensíveis.</p>
-                    </article>
+                <div class="search-form" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+                    <div class="form-row">
+                        <label for="adoption-filter-species">Espécie</label>
+                        <select id="adoption-filter-species">
+                            <option value="">Todos</option>
+                            <option value="Cachorro">Cachorro</option>
+                            <option value="Gato">Gato</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="adoption-filter-age">Idade</label>
+                        <select id="adoption-filter-age">
+                            <option value="">Todos</option>
+                            <option value="Filhote">Filhote</option>
+                            <option value="Adulto">Adulto</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="adoption-filter-city">Cidade</label>
+                        <input id="adoption-filter-city" type="text" placeholder="Ex: São Paulo">
+                    </div>
                 </div>
+                <div class="animal-grid" id="adoption-list"></div>
             </div>
         </section>
     </main>
@@ -87,6 +95,8 @@
             </div>
         </div>
     </footer>
+
+    <script src="../js/app.js"></script>
+    <script src="../js/animals.js"></script>
 </body>
 </html>
-

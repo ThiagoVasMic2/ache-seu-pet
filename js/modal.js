@@ -24,7 +24,7 @@ function showAnimalDetail(animal) {
                     <p><strong>Contato:</strong> ${animal.contact}</p>
                 </div>
                 <div style="display:flex;flex-wrap:wrap;gap:1rem;">
-                    <a href="contato.html" class="button button-primary">Entrar em contato</a>
+                    <a href="#contato" class="button button-primary">Entrar em contato</a>
                     <button class="button button-secondary" type="button" onclick="alert('Função simulada: compartilhar ocorrência.');">Compartilhar ocorrência</button>
                     <button class="button button-secondary" type="button" onclick="alert('Função simulada: informar que vi este animal.');">Informar que vi este animal</button>
                 </div>

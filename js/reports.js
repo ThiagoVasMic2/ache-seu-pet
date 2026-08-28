@@ -1,8 +1,11 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initReportForm() {
     const form = document.getElementById('report-form');
     if (!form) return;
 
-    form.addEventListener('submit', event => {
+    // avoid duplicate handlers
+    form.removeEventListener?.('submit', form._reportHandler);
+
+    const handler = event => {
         event.preventDefault();
         const formData = new FormData(form);
         const report = {
@@ -27,5 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
         saveReport(report);
         alert('Ocorrência registrada localmente. Em uma versão futura, ela será enviada para um backend seguro.');
         form.reset();
-    });
-});
+    };
+
+    form.addEventListener('submit', handler);
+    form._reportHandler = handler;
+}
+
+// keep previous behavior when page loads directly
+document.addEventListener('DOMContentLoaded', initReportForm);

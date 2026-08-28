@@ -11,7 +11,7 @@ function renderHomeCards() {
                     <span class="status-badge ${setStatusClass(animal.status)}">${animal.status}</span>
                 </div>
                 <p>${animal.species} • ${animal.city}, ${animal.state}</p>
-                <a href="pages/animal.html?id=${animal.id}">Quero conhecer</a>
+                <a href="#animal?id=${animal.id}">Quero conhecer</a>
             </div>
         </article>
     `).join('');
@@ -26,7 +26,7 @@ function renderPartnerPreview() {
             <h3>${partner.name}</h3>
             <p class="partner-meta">${partner.type} · ${partner.city}</p>
             <p>${partner.description}</p>
-            <a href="pages/parceiros.html">Ver parceiro</a>
+            <a href="#parceiros">Ver parceiro</a>
         </article>
     `).join('');
 }
@@ -36,7 +36,7 @@ function handleSearchSubmit() {
     form?.addEventListener('submit', event => {
         event.preventDefault();
         const params = new URLSearchParams(new FormData(form));
-        const url = `pages/animais.html?${params.toString()}`;
+        const url = `#animais?${params.toString()}`;
         window.location.href = url;
     });
 }

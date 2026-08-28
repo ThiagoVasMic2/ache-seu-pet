@@ -11,7 +11,7 @@ function createAnimalCard(animal, useDetailsLink = true) {
                 <p>${animal.species} • ${animal.city} - ${animal.region}</p>
                 <div class="animal-badges">${renderAnimalBadges(animal)}</div>
                 <p><small>Última atualização: ${animal.date}</small></p>
-                ${useDetailsLink ? `<a href="animal.html?id=${animal.id}">Ver detalhes</a>` : ''}
+                ${useDetailsLink ? `<a href="#animal?id=${animal.id}">Ver detalhes</a>` : ''}
             </div>
         </article>
     `;
@@ -130,7 +130,7 @@ function renderPartnersList() {
             <p class="partner-meta">${partner.type} · ${partner.city}</p>
             <p>${partner.description}</p>
             <p><strong>Contato:</strong> ${partner.contact}</p>
-            <a href="parceiros.html">Ver parceiro</a>
+            <a href="#parceiros">Ver parceiro</a>
         </article>
     `).join('');
 }
@@ -175,8 +175,27 @@ function hydrateAdoptionPage() {
     });
 }
 
+function initAdvancedToggle() {
+    const btn = document.getElementById('toggle-advanced');
+    const adv = document.getElementById('advanced-filters');
+    if (!btn || !adv) return;
+    btn.addEventListener('click', () => {
+        const isHidden = adv.hasAttribute('hidden');
+        if (isHidden) {
+            adv.removeAttribute('hidden');
+            btn.textContent = 'Ocultar filtros avançados';
+            btn.setAttribute('aria-expanded','true');
+        } else {
+            adv.setAttribute('hidden','');
+            btn.textContent = 'Mostrar filtros avançados';
+            btn.setAttribute('aria-expanded','false');
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     hydrateAnimalPage();
     renderPartnersList();
     hydrateAdoptionPage();
+    initAdvancedToggle();
 });

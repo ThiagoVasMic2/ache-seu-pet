@@ -390,8 +390,60 @@
 function initMobileMenu() {
     const toggle = document.querySelector('.nav-toggle');
     const nav = document.querySelector('.site-nav');
-    toggle?.addEventListener('click', () => {
-        nav?.classList.toggle('open');
+    if (!toggle || !nav) return;
+
+    // ensure controls attributes
+    if (!toggle.hasAttribute('aria-expanded')) toggle.setAttribute('aria-expanded', 'false');
+    if (!toggle.hasAttribute('aria-controls')) toggle.setAttribute('aria-controls', nav.id || 'site-navigation');
+    if (!nav.id) nav.id = 'site-navigation';
+
+    function openMenu() {
+        nav.classList.add('open');
+        toggle.setAttribute('aria-expanded', 'true');
+        // move focus to first link for keyboard users
+        const firstLink = nav.querySelector('a');
+        if (firstLink) firstLink.focus();
+    }
+
+    function closeMenu() {
+        nav.classList.remove('open');
+        toggle.setAttribute('aria-expanded', 'false');
+        toggle.focus();
+    }
+
+    // expose close for other modules (router)
+    window.closeMobileMenu = closeMenu;
+
+    toggle.addEventListener('click', (e) => {
+        const opened = nav.classList.contains('open');
+        if (opened) closeMenu(); else openMenu();
+    });
+
+    // support keyboard toggle (Enter/Space)
+    toggle.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            const opened = nav.classList.contains('open');
+            if (opened) closeMenu(); else openMenu();
+        }
+    });
+
+    // close menu on Esc
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && nav.classList.contains('open')) closeMenu();
+    });
+
+    // close when clicking a link inside nav (navigate)
+    nav.addEventListener('click', e => {
+        const a = e.target.closest('a');
+        if (a) closeMenu();
+    });
+
+    // close when clicking outside
+    document.addEventListener('click', e => {
+        if (!nav.contains(e.target) && !toggle.contains(e.target) && nav.classList.contains('open')) {
+            closeMenu();
+        }
     });
 }
 

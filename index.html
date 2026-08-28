@@ -12,8 +12,10 @@
     <link rel="icon" href="assets/logo/Ache-seu-Pet.png" type="image/png">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+q1x2Lk+Cq2nfzGxN0r+Z5N98hi+M1j9ZaN5MMF0A=" crossorigin="" />
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
     <header class="site-header">
         <div class="container header-content">
             <a href="index.html" class="brand">
@@ -23,27 +25,398 @@
                     <span>Conectando pessoas, protegendo animais</span>
                 </div>
             </a>
-            <button class="nav-toggle" aria-label="Abrir menu">
+            <button class="nav-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="site-navigation">
                 <span></span><span></span><span></span>
             </button>
-            <nav class="site-nav" aria-label="Menu principal">
+            <nav id="site-navigation" class="site-nav" aria-label="Menu principal" role="navigation">
                 <a href="index.html">Início</a>
-                <a href="pages/animais.html">Encontrar Animal</a>
-                <a href="pages/cadastrar-animal.html">Cadastrar Animal</a>
-                <a href="pages/mapa.html">Mapa</a>
-                <a href="pages/resgate.html">Resgate</a>
-                <a href="pages/adocao.html">Adoção</a>
-                <a href="pages/parceiros.html">Parceiros</a>
-                <a href="pages/sobre.html">Sobre</a>
+                <a href="#animais">Encontrar Animal</a>
+                <a href="#cadastrar-animal">Cadastrar Animal</a>
+                <a href="#mapa">Mapa</a>
+                <a href="#resgate">Resgate</a>
+                <a href="#adocao">Adoção</a>
+                <a href="#parceiros">Parceiros</a>
+                <a href="#sobre">Sobre</a>
             </nav>
             <div class="header-actions">
-                <a href="pages/contato.html" class="button button-secondary">Entrar</a>
-                <a href="pages/cadastrar-animal.html" class="button button-primary">Registrar ocorrência</a>
+                <a href="#contato" class="button button-secondary">Entrar</a>
+                <a href="#cadastrar-animal" class="button button-primary">Registrar ocorrência</a>
             </div>
         </div>
     </header>
 
-    <main>
+    <!-- SPA templates: conteúdo das páginas antigas (usado pelo router) -->
+    <template id="tmpl-animais" data-title="Encontrar Animal | Ache Seu Pet">
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Encontrar Animal</span>
+                    <h2>Busque por tipos, situações e localização aproximada</h2>
+                </div>
+                <form class="search-form" id="animal-search-form" aria-label="Filtrar animais">
+                    <div class="form-row">
+                        <label for="filter-category">Categoria</label>
+                        <select id="filter-category" name="category">
+                            <option value="">Todos</option>
+                            <option value="domestico">Doméstico</option>
+                            <option value="silvestre">Silvestre</option>
+                            <option value="rural">Rural</option>
+                            <option value="exotico">Exótico</option>
+                            <option value="nao_identificado">Não identificado</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-status">Situação</label>
+                        <select id="filter-status" name="status">
+                            <option value="">Todas</option>
+                            <option value="perdido">Perdido</option>
+                            <option value="encontrado">Encontrado</option>
+                            <option value="abandonado">Abandonado</option>
+                            <option value="resgate_solicitado">Resgate solicitado</option>
+                            <option value="resgatado">Resgatado</option>
+                            <option value="para_adocao">Para adoção</option>
+                            <option value="adotado">Adotado</option>
+                            <option value="reencontrado">Reencontrado</option>
+                            <option value="silvestre_avistado">Silvestre avistado</option>
+                            <option value="ferido">Ferido</option>
+                            <option value="encerrado">Encerrado</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-city">Cidade</label>
+                        <input type="text" id="filter-city" name="city" placeholder="Digite a cidade">
+                    </div>
+                    <div class="form-row">
+                        <label for="filter-radius">Raio</label>
+                        <select id="filter-radius" name="radius">
+                            <option value="1">1 km</option>
+                            <option value="5" selected>5 km</option>
+                            <option value="10">10 km</option>
+                            <option value="25">25 km</option>
+                            <option value="50">50 km</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <button type="button" id="toggle-advanced" class="button button-secondary" aria-expanded="false">Mostrar filtros avançados</button>
+                    </div>
+
+                    <div id="advanced-filters" hidden>
+                        <div class="form-row">
+                            <label for="filter-class">Classe</label>
+                            <select id="filter-class" name="class" multiple size="5">
+                                <option value="mamifero">Mamífero</option>
+                                <option value="ave">Ave</option>
+                                <option value="reptil">Réptil</option>
+                                <option value="anfibio">Anfíbio</option>
+                                <option value="peixe">Peixe</option>
+                                <option value="invertebrado">Invertebrado</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label for="filter-movement">Locomoção</label>
+                            <select id="filter-movement" name="movement" multiple size="5">
+                                <option value="terrestre">Terrestre</option>
+                                <option value="voa">Voa</option>
+                                <option value="aquatico">Aquático</option>
+                                <option value="semi_aquatico">Semi-aquático</option>
+                                <option value="arboricola">Arborícola</option>
+                                <option value="rasteja">Rasteja</option>
+                                <option value="salta">Salta</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label for="filter-diet">Alimentação</label>
+                            <select id="filter-diet" name="diet" multiple size="5">
+                                <option value="carnivoro">Carnívoro</option>
+                                <option value="herbivoro">Herbívoro</option>
+                                <option value="onivoro">Onívoro</option>
+                                <option value="insetivoro">Insetívoro</option>
+                                <option value="detritivoro">Detritívoro</option>
+                            </select>
+                        </div>
+                        <div class="form-row">
+                            <label for="filter-habitat">Habitat</label>
+                            <select id="filter-habitat" name="habitat" multiple size="5">
+                                <option value="urbano">Urbano</option>
+                                <option value="floresta">Floresta</option>
+                                <option value="rural">Rural</option>
+                                <option value="campo">Campo</option>
+                                <option value="rio">Rio</option>
+                                <option value="lago">Lago</option>
+                                <option value="mar">Mar</option>
+                                <option value="praia">Praia</option>
+                                <option value="ambiente_domestico">Ambiente doméstico</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row form-actions">
+                        <button type="submit" class="button button-primary">Buscar</button>
+                    </div>
+                </form>
+                <div class="section-heading" style="margin-top:2rem;">
+                    <h2>Resultados</h2>
+                </div>
+                <div class="animal-grid" id="animals-results"></div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tmpl-cadastrar" data-title="Cadastrar Animal | Ache Seu Pet">
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Registre uma ocorrência</span>
+                    <h2>Ajude a proteger o animal com informações claras</h2>
+                </div>
+                <p>Por segurança, sua localização exata não será exibida publicamente.</p>
+                <form id="report-form" class="search-form" aria-label="Formulário de cadastro de ocorrência">
+                    <fieldset>
+                        <legend>O que aconteceu?</legend>
+                        <label><input type="radio" name="eventType" value="Meu animal está perdido" required> Meu animal está perdido</label>
+                        <label><input type="radio" name="eventType" value="Encontrei um animal"> Encontrei um animal</label>
+                        <label><input type="radio" name="eventType" value="Encontrei um animal abandonado"> Encontrei um animal abandonado</label>
+                        <label><input type="radio" name="eventType" value="Vi um animal perdido"> Vi um animal perdido</label>
+                        <label><input type="radio" name="eventType" value="Animal silvestre encontrado"> Animal silvestre encontrado</label>
+                        <label><input type="radio" name="eventType" value="Preciso de ajuda para resgate"> Preciso de ajuda para resgate</label>
+                    </fieldset>
+                    <div class="form-row">
+                        <label for="animal-name">Nome do animal</label>
+                        <input id="animal-name" name="name" type="text" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-species">Espécie</label>
+                        <input id="animal-species" name="species" type="text" required placeholder="Cachorro, Gato, Animal silvestre">
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-breed">Raça</label>
+                        <input id="animal-breed" name="breed" type="text" placeholder="SRD, Siamês, Labrador">
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-sex">Sexo</label>
+                        <select id="animal-sex" name="sex" required>
+                            <option value="">Selecione</option>
+                            <option value="Macho">Macho</option>
+                            <option value="Fêmea">Fêmea</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-color">Cor</label>
+                        <input id="animal-color" name="color" type="text" placeholder="Ex: marrom e branco">
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-characteristics">Características</label>
+                        <input id="animal-characteristics" name="characteristics" type="text" placeholder="Ex: coleira verde, orelhas grandes">
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-date">Data</label>
+                        <input id="animal-date" name="date" type="date" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-city">Cidade</label>
+                        <input id="animal-city" name="city" type="text" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-region">Bairro / região</label>
+                        <input id="animal-region" name="region" type="text" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-photos">Fotos (opcional)</label>
+                        <input id="animal-photos" name="photos" type="file" accept="image/*" multiple>
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-description">Descrição</label>
+                        <textarea id="animal-description" name="description" rows="5" required></textarea>
+                    </div>
+                    <div class="form-row">
+                        <label for="animal-contact">Forma de contato</label>
+                        <input id="animal-contact" name="contact" type="text" required placeholder="Telefone, e-mail ou instituição">
+                    </div>
+                    <div class="form-row form-actions">
+                        <button type="submit" class="button button-primary">Enviar ocorrência</button>
+                    </div>
+                    <p class="field-note">Por segurança, sua localização exata não será exibida publicamente.</p>
+                </form>
+            </div>
+        </section>
+    </template>
+
+    <template id="tmpl-mapa" data-title="Mapa | Ache Seu Pet">
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Mapa de ocorrências</span>
+                    <h2>Veja onde estão os casos ativos</h2>
+                </div>
+                <div class="card-panel" style="gap:1rem;flex-wrap:wrap;">
+                    <div class="form-row">
+                        <label for="map-filter-status">Filtro por status</label>
+                        <select id="map-filter-status">
+                            <option value="">Todos</option>
+                            <option value="Perdido">Animal perdido</option>
+                            <option value="Encontrado">Animal encontrado</option>
+                            <option value="Em Adoção">Para adoção</option>
+                            <option value="Resgate solicitado">Resgate solicitado</option>
+                            <option value="Animal silvestre">Animal silvestre</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="map-filter-type">Tipo</label>
+                        <select id="map-filter-type">
+                            <option value="">Todos</option>
+                            <option value="Cachorro">Cachorro</option>
+                            <option value="Gato">Gato</option>
+                            <option value="Animal silvestre">Animal silvestre</option>
+                        </select>
+                    </div>
+                    <a href="#animais" class="button button-secondary">Ver lista completa</a>
+                </div>
+                <div id="map"></div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tmpl-animal" data-title="Detalhes do Animal | Ache Seu Pet">
+        <section class="section">
+            <div class="container" id="animal-detail"></div>
+        </section>
+    </template>
+
+    <template id="tmpl-sobre" data-title="Sobre | Ache Seu Pet">
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Nossa missão</span>
+                    <h2>Conectar pessoas, proteger animais e facilitar resgates com segurança.</h2>
+                </div>
+                <p>O Ache Seu Pet é uma plataforma pensada para oferecer acesso rápido a ocorrências de animais perdidos, encontrados, em adoção e em resgate. Ele prioriza orientações responsáveis e a segurança de animais domésticos e silvestres.</p>
+                <div class="workflow-grid">
+                    <article class="workflow-card">
+                        <strong>Missão social</strong>
+                        <p>Promover proteção animal com um sistema acessível, inclusivo e de confiança.</p>
+                    </article>
+                    <article class="workflow-card">
+                        <strong>Futuro conectado</strong>
+                        <p>Arquitetura preparada para backend, autenticação e banco de dados.</p>
+                    </article>
+                    <article class="workflow-card">
+                        <strong>Privacidade</strong>
+                        <p>Localização aproximada de ocorrências sem expor dados pessoais sensíveis.</p>
+                    </article>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tmpl-parceiros" data-title="Parceiros | Ache Seu Pet">
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Parceiros</span>
+                    <h2>Instituições e voluntários que atuam junto à plataforma</h2>
+                </div>
+                <div class="partner-grid" id="partners-list"></div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tmpl-resgate" data-title="Resgate | Ache Seu Pet">
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Precisa de ajuda?</span>
+                    <h2>Encontrou um animal ferido, abandonado ou em situação de risco?</h2>
+                </div>
+                <div class="workflow-grid">
+                    <article class="workflow-card">
+                        <strong>🐾 Animal doméstico</strong>
+                        <p>Orientações para casos de cães e gatos em situação de abandono ou ferimentos.</p>
+                    </article>
+                    <article class="workflow-card">
+                        <strong>🌳 Animal silvestre</strong>
+                        <p>Para fauna encontrada em áreas públicas, siga a orientação para não manipular o animal.</p>
+                    </article>
+                    <article class="workflow-card">
+                        <strong>🚨 Situação urgente</strong>
+                        <p>Se houver risco imediato, procure órgãos especializados ou serviços de emergência locais.</p>
+                    </article>
+                </div>
+                <div class="awareness-card">
+                    <div>
+                        <span class="eyebrow">Aviso de segurança</span>
+                        <h2>Não tente capturar ou manipular animais silvestres perigosos.</h2>
+                        <p>Mantenha distância e acesse suporte especializado. O resgate seguro protege você e o animal.</p>
+                    </div>
+                    <a href="#cadastrar-animal" class="button button-primary">Solicitar orientação</a>
+                </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tmpl-adocao" data-title="Adoção | Ache Seu Pet">
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Adoção</span>
+                    <h2>Conheça animais disponíveis para adoção</h2>
+                </div>
+                <div class="search-form" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem;">
+                    <div class="form-row">
+                        <label for="adoption-filter-species">Espécie</label>
+                        <select id="adoption-filter-species">
+                            <option value="">Todos</option>
+                            <option value="Cachorro">Cachorro</option>
+                            <option value="Gato">Gato</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="adoption-filter-age">Idade</label>
+                        <select id="adoption-filter-age">
+                            <option value="">Todos</option>
+                            <option value="Filhote">Filhote</option>
+                            <option value="Adulto">Adulto</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
+                        <label for="adoption-filter-city">Cidade</label>
+                        <input id="adoption-filter-city" type="text" placeholder="Ex: São Paulo">
+                    </div>
+                </div>
+                <div class="animal-grid" id="adoption-list"></div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tmpl-contato" data-title="Contato | Ache Seu Pet">
+        <section class="section">
+            <div class="container">
+                <div class="section-heading">
+                    <span class="eyebrow">Fale conosco</span>
+                    <h2>Tem dúvidas ou precisa de suporte?</h2>
+                </div>
+                <p>Envie sua mensagem e nossa equipe responderá assim que possível. Esta é uma versão de demonstração com dados locais.</p>
+                <form id="contact-form" class="search-form" aria-label="Formulário de contato">
+                    <div class="form-row">
+                        <label for="contact-name">Nome</label>
+                        <input id="contact-name" name="name" type="text" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="contact-email">E-mail</label>
+                        <input id="contact-email" name="email" type="email" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="contact-message">Mensagem</label>
+                        <textarea id="contact-message" name="message" rows="5" required></textarea>
+                    </div>
+                    <div class="form-row form-actions">
+                        <button type="submit" class="button button-primary">Enviar mensagem</button>
+                    </div>
+                </form>
+            </div>
+        </section>
+    </template>
+
+    <main id="main-content">
         <section class="hero section-primary">
             <div class="container hero-grid">
                 <div class="hero-copy">
@@ -51,8 +424,8 @@
                     <h1>Ajude um animal a encontrar o caminho de volta.</h1>
                     <p>Encontre animais perdidos, registre animais encontrados e conecte-se a redes de resgate, adoção e proteção animal.</p>
                     <div class="hero-actions">
-                        <a href="pages/animais.html" class="button button-primary">Encontrar um animal</a>
-                        <a href="pages/cadastrar-animal.html" class="button button-secondary">Registrar ocorrência</a>
+                        <a href="#animais" class="button button-primary">Encontrar um animal</a>
+                        <a href="#cadastrar-animal" class="button button-secondary">Registrar ocorrência</a>
                     </div>
                     <div class="hero-trust">
                         <span>Rede preparada para proteção animal</span>
@@ -108,7 +481,7 @@
                     </div>
                     <div class="form-row form-actions">
                         <button type="submit" class="button button-primary">Buscar</button>
-                        <a href="pages/animais.html" class="button button-secondary">Ver todas</a>
+                        <a href="#animais" class="button button-secondary">Ver todas</a>
                     </div>
                 </form>
             </div>
@@ -121,27 +494,27 @@
                     <h2>Filtre por tipo de ocorrência</h2>
                 </div>
                 <div class="category-grid">
-                    <a href="pages/animais.html" class="category-card">
+                    <a href="#animais" class="category-card">
                         <img src="assets/images/Animal-Doméstico.png" alt="Animais domésticos">
                         <h3>Doméstico</h3>
                         <p>Encontre cães, gatos e outros animais que convivem com as pessoas.</p>
                     </a>
-                    <a href="pages/animais.html" class="category-card">
+                    <a href="#animais" class="category-card">
                         <img src="assets/images/Animal-Silvestre.png" alt="Animal silvestre">
                         <h3>Silvestre</h3>
                         <p>Ajude a identificar e proteger animais da fauna silvestre.</p>
                     </a>
-                    <a href="pages/animais.html" class="category-card">
+                    <a href="#animais" class="category-card">
                         <img src="assets/images/Animal-Réptil.png" alt="Réptil">
                         <h3>Réptil</h3>
                         <p>Encontre e identifique répteis que precisam de ajuda.</p>
                     </a>
-                    <a href="pages/animais.html" class="category-card">
+                    <a href="#animais" class="category-card">
                         <img src="assets/images/Animal-Aquático.png" alt="Animal aquático">
                         <h3>Aquático</h3>
                         <p>Ajude animais encontrados em rios, lagos, mares e outros ambientes aquáticos.</p>
                     </a>
-                    <a href="pages/animais.html" class="category-card">
+                    <a href="#animais" class="category-card">
                         <img src="assets/images/Animal-Anfíbio.png" alt="Anfíbio">
                         <h3>Anfíbio</h3>
                         <p>Ajude a proteger sapos, rãs e outros anfíbios.</p>
@@ -157,7 +530,7 @@
                     <h2>Mapa de casos ativos</h2>
                     <p>Veja onde há mais animais perdidos, encontrados e queued para resgate.</p>
                 </div>
-                <a href="pages/mapa.html" class="button button-primary">Abrir mapa</a>
+                <a href="#mapa" class="button button-primary">Abrir mapa</a>
             </div>
         </section>
 
@@ -219,7 +592,7 @@
                     <h2>Se for um animal silvestre ou situação de risco, mantenha distância e peça ajuda.</h2>
                     <p>O sistema orienta e conecta você aos profissionais e órgãos responsáveis para proteger tanto o animal quanto você.</p>
                 </div>
-                <a href="pages/resgate.html" class="button button-secondary">Solicitar orientação</a>
+                <a href="#resgate" class="button button-secondary">Solicitar orientação</a>
             </div>
         </section>
     </main>
@@ -234,13 +607,13 @@
                 <p>Conectando pessoas, protegendo animais.</p>
             </div>
             <div class="footer-links">
-                <a href="pages/animais.html">Encontrar animal</a>
-                <a href="pages/cadastrar-animal.html">Registrar ocorrência</a>
-                <a href="pages/adocao.html">Adoção</a>
-                <a href="pages/resgate.html">Resgate</a>
-                <a href="pages/parceiros.html">Parceiros</a>
-                <a href="pages/sobre.html">Sobre</a>
-                <a href="pages/contato.html">Contato</a>
+                <a href="#animais">Encontrar animal</a>
+                <a href="#cadastrar-animal">Registrar ocorrência</a>
+                <a href="#adocao">Adoção</a>
+                <a href="#resgate">Resgate</a>
+                <a href="#parceiros">Parceiros</a>
+                <a href="#sobre">Sobre</a>
+                <a href="#contato">Contato</a>
             </div>
             <div class="footer-note">
                 <p>Em caso de emergência, procure os serviços públicos e profissionais responsáveis da sua região.</p>
@@ -248,9 +621,14 @@
         </div>
     </footer>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7w4HjF3sNnb+gV4FSY1HU9O7l5/4qk6F8CBpYE=" crossorigin=""></script>
     <script src="js/app.js"></script>
     <script src="js/home.js"></script>
+    <script src="js/animals.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/reports.js"></script>
     <script src="js/modal.js"></script>
+    <script src="js/router.js"></script>
 </body>
 </html>
 

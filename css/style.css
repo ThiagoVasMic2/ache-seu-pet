@@ -6,7 +6,8 @@
     --cream: #F7F3EA;
     --white: #FFFFFF;
     --text: #102A3B;
-    --muted: #667085;
+    /* slightly darker muted for better contrast */
+    --muted: #485260;
     --danger: #D64545;
     --border: #D9D9D9;
 }
@@ -122,14 +123,28 @@ a.button {
 }
 
 .button-primary {
-    background: var(--green);
+    /* brighter primary for stronger contrast */
+    background: linear-gradient(180deg, #2B7A5A 0%, var(--green) 100%);
     color: var(--white);
-    box-shadow: 0 16px 40px rgba(36,92,69,0.12);
+    box-shadow: 0 20px 48px rgba(36,92,69,0.18);
+    border: 1px solid rgba(0,0,0,0.04);
+}
+
+.button-primary:focus-visible {
+    outline: 3px solid rgba(46,111,81,0.22);
+    border-radius: 999px;
 }
 
 .button-primary:hover,
 .button-secondary:hover {
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+}
+
+/* improve secondary button contrast */
+.button-secondary {
+    background: rgba(23,50,71,0.06);
+    color: var(--blue);
+    border: 1px solid rgba(23,50,71,0.06);
 }
 
 .button-secondary {
@@ -153,6 +168,54 @@ a.button {
     background: var(--blue);
     border-radius: 2px;
 }
+
+/* Accessibility: visible focus for keyboard users */
+.nav-toggle:focus-visible {
+    outline: 3px solid rgba(36,92,69,0.18);
+    border-radius: 8px;
+}
+
+.site-nav a:focus-visible {
+    outline: 3px solid rgba(23,50,71,0.12);
+    border-radius: 6px;
+    padding: 0.25rem 0.4rem;
+}
+
+/* Skip link for keyboard users */
+.skip-link {
+    position: absolute;
+    left: -999px;
+    top: auto;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    z-index: 999;
+}
+.skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+    width: auto;
+    height: auto;
+    padding: 0.5rem 0.75rem;
+    background: var(--green);
+    color: var(--white);
+    border-radius: 8px;
+    text-decoration: none;
+    box-shadow: 0 8px 20px rgba(16,42,59,0.12);
+}
+
+/* Slightly larger primary CTA on hero for prominence */
+.hero-actions .button-primary {
+    padding: 1.15rem 1.75rem;
+    font-size: 1.03rem;
+    box-shadow: 0 20px 52px rgba(36,92,69,0.16);
+}
+
+.hero-actions .button-secondary {
+    padding: 0.9rem 1.25rem;
+}
+
+
 
 .section {
     padding: 3rem 0;
@@ -199,8 +262,12 @@ a.button {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
+    align-items: center;
 }
 
+.hero-actions .button {
+    min-height: 48px;
+}
 .hero-trust {
     margin-top: 2rem;
     color: var(--muted);
@@ -325,6 +392,9 @@ a.button {
 
 .hero-copy h1 {
     font-size: clamp(2rem, 4vw, 3.2rem);
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    max-width: 46ch; /* improves readability */
 }
 
 .animal-grid {

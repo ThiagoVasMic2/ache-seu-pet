@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', () => {
+function initMap() {
     const mapElement = document.getElementById('map');
     if (!mapElement || typeof L === 'undefined') return;
 
@@ -25,7 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <strong>${animal.name}</strong>
                 <p style="margin:0.35rem 0 0.45rem;color:#4D5B6B;font-size:0.95rem;">${animal.species} • ${animal.status}</p>
                 <p style="margin:0 0 0.6rem;font-size:0.95rem;">${animal.region}, ${animal.city}</p>
-                <a href="animal.html?id=${animal.id}" style="display:inline-block;padding:0.6rem 0.85rem;background:#245C45;color:#fff;border-radius:999px;text-decoration:none;font-size:0.95rem;">Ver ocorrência</a>
+                <a href="#animal?id=${animal.id}" style="display:inline-block;padding:0.6rem 0.85rem;background:#245C45;color:#fff;border-radius:999px;text-decoration:none;font-size:0.95rem;">Ver ocorrência</a>
             </div>
         `;
     }
@@ -55,4 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
     typeFilter?.addEventListener('change', refreshMarkers);
 
     addMarkers();
-});
+}
+
+// keep previous behavior when page loads directly
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initMap);
+} else {
+    initMap();
+}

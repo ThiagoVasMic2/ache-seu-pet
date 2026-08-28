@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Encontrar Animal — Redirecionando…</title>
+  <meta http-equiv="refresh" content="0; url=index.html#animais">
+</head>
+<body>
+  <p>Redirecionando para a página de lista — se o redirecionamento não funcionar, <a id="jslink" href="index.html#animais">clique aqui</a>.</p>
+  <script>
+    // Preserve querystring (e.g. ?status=Perdido)
+    (function(){
+      try {
+        var qs = window.location.search || '';
+        var target = 'index.html#animais' + (qs ? '?' + qs.replace(/^\?/, '') : '');
+        // use replace to avoid duplicate history entry when redirecting
+        window.location.replace(target);
+      } catch (e) {
+        // fallback link already present for no-script users
+        document.getElementById('jslink').style.display = 'inline';
+      }
+    })();
+  </script>
+</body>
+</html>
