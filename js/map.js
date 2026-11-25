@@ -1,6 +1,18 @@
-function initMap() {
+async function initMap() {
     const mapElement = document.getElementById('map');
     if (!mapElement || typeof L === 'undefined') return;
+    if (mapElement.dataset.initialized === 'true' || mapElement.dataset.loading === 'true') return;
+    mapElement.dataset.loading = 'true';
+
+    try {
+        await loadPublicAnimals();
+    } catch (error) {
+        console.error('Could not load reports for the map:', error);
+        const notice = document.getElementById('map-notice');
+        if (notice) notice.textContent = 'Não foi possível carregar as ocorrências para o mapa.';
+        delete mapElement.dataset.loading;
+        return;
+    }
 
     const map = L.map('map').setView([-15.7801, -47.9292], 4);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -60,6 +72,8 @@ function initMap() {
     typeFilter?.addEventListener('change', refreshMarkers);
 
     addMarkers();
+    mapElement.dataset.initialized = 'true';
+    delete mapElement.dataset.loading;
 }
 
 // keep previous behavior when page loads directly

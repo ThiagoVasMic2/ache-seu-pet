@@ -12,6 +12,7 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 - CSS3
 - JavaScript moderno (ES6+)
 - Leaflet.js + OpenStreetMap para mapa (página de mapa)
+- Supabase Auth, Postgres, Row Level Security e Realtime para contas e conversas
 
 ## Estrutura de pastas
 
@@ -27,35 +28,33 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 
 ## Como executar
 
-1. Abra o diretório do projeto no Visual Studio Code.
-2. Abra `index.html` no navegador.
+1. Configure o Supabase conforme a seção abaixo.
+2. Sirva o projeto por HTTP local (por exemplo, com a extensão Live Server do VS Code); não abra `index.html` como `file://`.
+3. Abra o endereço local no navegador.
 
 ## Funcionalidades
 
 - Header responsivo com menu mobile
 - Página inicial com hero, busca rápida, categorias, adição de cards e parceiros
 - Busca de animais com filtros por tipo, situação, cidade e raio
-- Página de cadastro de ocorrência com validação básica
+- Cadastro de ocorrências associado à conta autenticada
+- Área compacta no topo para acompanhar postagens próprias e conversas recentes
+- Remoção de postagens próprias
+- Chat privado em tempo real entre quem publicou e quem encontrou o animal
 - Página de mapa com marcadores e filtros de status
-- Uso de `localStorage` para armazenar ocorrências temporárias
 - Design acessível com HTML semântico e foco visível
 
-## Arquitetura futura
+## Configurar Supabase
 
-O projeto está preparado para receber backend com:
+1. Crie um projeto no Supabase.
+2. No SQL Editor do projeto, execute `supabase/schema.sql`. O script cria as tabelas, políticas RLS e publicação Realtime necessárias.
+3. Copie a URL do projeto e a chave pública `anon`/`publishable` para `js/supabase-config.js`.
+4. Em Authentication → URL Configuration, adicione o endereço local e o domínio publicado à lista de URLs permitidas para redirecionamento.
+5. Teste criando uma conta com e-mail válido. Se a confirmação de e-mail estiver habilitada, confirme a mensagem antes de entrar.
 
-- Node.js
-- Express
-- PostgreSQL ou MongoDB
-- Autenticação e autorização
-- API de mapas e geolocalização
-- Upload seguro de imagens
+**Nunca use a chave `service_role` no navegador nem a envie ao GitHub.** A chave pública é usada no cliente; a segurança dos dados depende das políticas RLS definidas no schema.
 
-## Adicionar novos animais
-
-1. Abra `js/app.js`.
-2. Adicione um novo objeto no array `achePetApp.animals`.
-3. Preencha `id`, `name`, `species`, `status`, `city`, `state`, `region`, `date`, `image` e demais campos.
+As ocorrências antigas guardadas no `localStorage` não são migradas automaticamente, pois não têm um proprietário autenticado associado. As fotos selecionadas no formulário ainda não são enviadas ou armazenadas.
 
 ## Adicionar novos parceiros
 

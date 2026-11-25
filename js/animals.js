@@ -1,7 +1,9 @@
-function createAnimalCard(animal, useDetailsLink = true) {
+function createAnimalCard(animal, useDetailsLink = true, compact = false) {
     const imagePath = escapeHTML(resolveAssetPath(animal.image));
+    const user = window.achePetBackend?.getCurrentUser();
+    const canContactOwner = compact && animal.status === 'Perdido' && animal.ownerId && animal.ownerId !== user?.id;
     return `
-        <article class="animal-card">
+        <article class="animal-card${compact ? ' animal-card--compact' : ''}">
             <img src="${imagePath}" alt="Foto de ${escapeHTML(animal.name)}" loading="lazy">
             <div class="animal-card-content">
                 <div>
@@ -12,6 +14,7 @@ function createAnimalCard(animal, useDetailsLink = true) {
                 <div class="animal-badges">${renderAnimalBadges(animal)}</div>
                 <p><small>Última atualização: ${escapeHTML(animal.date)}</small></p>
                 ${useDetailsLink ? `<a href="#animal?id=${encodeURIComponent(animal.id)}">Ver detalhes</a>` : ''}
+                ${canContactOwner ? `<a class="button button-primary contact-owner-button" href="#conversas?reportId=${encodeURIComponent(animal.id)}">Encontrei seu pet</a>` : ''}
             </div>
         </article>
     `;
@@ -190,36 +193,45 @@ function renderPartnersList() {
     `).join('');
 }
 
-function hydrateAnimalPage() {
+async function hydrateAnimalPage() {
     const cardContainer = document.getElementById('animals-results');
     if (!cardContainer) return;
     applyAnimalSearchParams();
     initAdvancedToggle();
-    applyAnimalFilters();
     const form = document.getElementById('animal-search-form');
-    if (form?.dataset.filtersInitialized === 'true') return;
-    if (form) form.dataset.filtersInitialized = 'true';
-    form?.addEventListener('submit', event => {
-        event.preventDefault();
+    if (form?.dataset.filtersInitialized !== 'true') {
+        if (form) form.dataset.filtersInitialized = 'true';
+        form?.addEventListener('submit', event => {
+            event.preventDefault();
+            applyAnimalFilters();
+        });
+
+        const filterInputs = [
+            'filter-category',
+            'filter-type',
+            'filter-class',
+            'filter-movement',
+            'filter-diet',
+            'filter-habitat',
+            'filter-status',
+            'filter-city'
+        ];
+
+        filterInputs.forEach(id => {
+            const element = document.getElementById(id);
+            element?.addEventListener('change', applyAnimalFilters);
+            element?.addEventListener('input', applyAnimalFilters);
+        });
+    }
+
+    cardContainer.textContent = 'Carregando ocorrências…';
+    try {
+        await loadPublicAnimals();
         applyAnimalFilters();
-    });
-
-    const filterInputs = [
-        'filter-category',
-        'filter-type',
-        'filter-class',
-        'filter-movement',
-        'filter-diet',
-        'filter-habitat',
-        'filter-status',
-        'filter-city'
-    ];
-
-    filterInputs.forEach(id => {
-        const element = document.getElementById(id);
-        element?.addEventListener('change', applyAnimalFilters);
-        element?.addEventListener('input', applyAnimalFilters);
-    });
+    } catch (error) {
+        console.error('Could not load animal reports:', error);
+        cardContainer.textContent = 'Não foi possível carregar as ocorrências. Tente novamente mais tarde.';
+    }
 }
 
 function hydrateAdoptionPage() {

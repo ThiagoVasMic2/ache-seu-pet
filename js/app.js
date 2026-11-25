@@ -133,7 +133,7 @@ function setStatusClass(status) {
 
 function reportToAnimal(report) {
     const species = String(report.species || 'Espécie não identificada');
-    const eventType = String(report.eventType || '');
+    const eventType = String(report.event_type || report.eventType || '');
     const statusByEvent = {
         'Meu animal está perdido': {label: 'Perdido', tag: 'perdido'},
         'Encontrei um animal': {label: 'Encontrado', tag: 'encontrado'},
@@ -144,10 +144,12 @@ function reportToAnimal(report) {
     };
     const status = statusByEvent[eventType] || {label: 'Recebido', tag: 'recebido'};
     const isWild = eventType === 'Animal silvestre encontrado' || species.toLowerCase().includes('silvestre');
-    const parsedDate = report.date ? new Date(`${report.date}T00:00:00`) : null;
+    const date = report.event_date || report.date;
+    const parsedDate = date ? new Date(`${date}T00:00:00`) : null;
 
     return {
         id: report.id,
+        ownerId: report.owner_id || report.ownerId || null,
         name: String(report.name || species),
         species,
         type: species,
@@ -163,10 +165,9 @@ function reportToAnimal(report) {
         region: report.region || '',
         state: report.state || '',
         description: report.description || '',
-        contact: report.contact || '',
         date: parsedDate && !Number.isNaN(parsedDate.getTime())
             ? parsedDate.toLocaleDateString('pt-BR')
-            : String(report.date || '')
+            : String(date || '')
     };
 }
 
@@ -182,6 +183,17 @@ function loadReports() {
 }
 
 achePetApp.animals = loadReports().map(reportToAnimal);
+
+async function loadPublicAnimals() {
+    if (window.achePetBackend?.isConfigured) {
+        const reports = await window.achePetBackend.listReports();
+        achePetApp.animals = reports.map(reportToAnimal);
+        return achePetApp.animals;
+    }
+
+    achePetApp.animals = loadReports().map(reportToAnimal);
+    return achePetApp.animals;
+}
 
 function animateSections() {
     document.querySelectorAll('.section, .card-panel').forEach((section, index) => {
@@ -209,6 +221,8 @@ window.achePetStore = {
         setStatusClass,
         saveReport,
         loadReports,
+        loadPublicAnimals,
+        reportToAnimal,
         getQueryParams,
         getAnimalById
     }

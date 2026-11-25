@@ -82,46 +82,69 @@ async function initForPath(absoluteUrl) {
     } else if (path.endsWith('/pages/cadastrar-animal.html') || path.endsWith('/cadastrar-animal.html')) {
         if (typeof initReportForm === 'function') initReportForm();
     } else if (path.endsWith('/pages/mapa.html') || path.endsWith('/mapa.html')) {
-        if (typeof initMap === 'function') initMap();
+        if (typeof initMap === 'function') await initMap();
     } else if (path.endsWith('/pages/adocao.html') || path.endsWith('/adocao.html')) {
         if (typeof hydrateAdoptionPage === 'function') hydrateAdoptionPage();
     } else if (path.endsWith('/pages/parceiros.html') || path.endsWith('/parceiros.html')) {
         if (typeof renderPartnersList === 'function') renderPartnersList();
+    } else if (path.endsWith('/conta.html')) {
+        await initAuthPage();
+    } else if (path.endsWith('/conversas.html')) {
+        await initChatPage(url.searchParams);
     } else if (path.endsWith('/pages/animal.html') || path.endsWith('/animal.html')) {
-        renderAnimalDetail(url.searchParams);
+        await renderAnimalDetail(url.searchParams);
     } else if (path === '/' || path.endsWith('index.html')) {
+        initOwnerDashboard();
+        await refreshOwnerDashboard();
         if (typeof renderHomeCards === 'function') renderHomeCards();
         if (typeof renderPartnerPreview === 'function') renderPartnerPreview();
         if (typeof handleSearchSubmit === 'function') handleSearchSubmit();
     }
 }
 
-function renderAnimalDetail(searchParams) {
+async function renderAnimalDetail(searchParams) {
     const id = searchParams.get ? searchParams.get('id') : (new URL(location.href)).searchParams.get('id');
     const animal = (typeof achePetStore !== 'undefined' && achePetStore.helpers) ? achePetStore.helpers.getAnimalById(id) : null;
     const container = document.getElementById('animal-detail');
     if (!container) return;
-    if (!animal) {
+    let selectedAnimal = animal;
+    if (!selectedAnimal && window.achePetBackend?.isConfigured) {
+        try {
+            const report = await window.achePetBackend.getReport(id);
+            if (report) selectedAnimal = achePetStore.helpers.reportToAnimal(report);
+        } catch (error) {
+            console.error('Could not load animal details:', error);
+            container.textContent = 'Não foi possível carregar esta ocorrência.';
+            return;
+        }
+    }
+    if (!selectedAnimal) {
         container.innerHTML = '<p>Animal não encontrado.</p>';
         return;
     }
 
-    const imagePath = escapeHTML(resolveAssetPath(animal.image));
+    const imagePath = escapeHTML(resolveAssetPath(selectedAnimal.image));
+    const user = window.achePetBackend?.getCurrentUser();
+    const contactLink = selectedAnimal.status === 'Perdido'
+        && selectedAnimal.ownerId
+        && selectedAnimal.ownerId !== user?.id
+        ? `<a class="button button-primary" href="#conversas?reportId=${encodeURIComponent(selectedAnimal.id)}">Encontrei seu pet</a>`
+        : '';
     container.innerHTML = `
         <div class="card-panel" style="gap:1rem;">
             <div style="flex:1;min-width:280px;">
-                <img src="${imagePath}" alt="${escapeHTML(animal.name)}" style="width:100%;border-radius:16px;" loading="lazy">
+                <img src="${imagePath}" alt="${escapeHTML(selectedAnimal.name)}" style="width:100%;border-radius:16px;" loading="lazy">
             </div>
             <div style="flex:2;min-width:280px;">
-                <h2>${escapeHTML(animal.name)}</h2>
-                <div><span class="status-badge ${setStatusClass(animal.status)}">${escapeHTML(animal.status)}</span></div>
-                <p><strong>Espécie:</strong> ${escapeHTML(animal.species)}</p>
-                <p><strong>Raça:</strong> ${escapeHTML(animal.breed || 'Não informada')}</p>
-                <p><strong>Sexo:</strong> ${escapeHTML(animal.sex || '-')}</p>
-                <p><strong>Local:</strong> ${escapeHTML(animal.region || 'Região não informada')}, ${escapeHTML(animal.city)}${animal.state ? ` - ${escapeHTML(animal.state)}` : ''}</p>
-                <p><strong>Descrição:</strong> ${escapeHTML(animal.description || '')}</p>
-                <p><strong>Contato:</strong> ${escapeHTML(animal.contact || '')}</p>
-                <p><small>Última atualização: ${escapeHTML(animal.date)}</small></p>
+                <h2>${escapeHTML(selectedAnimal.name)}</h2>
+                <div><span class="status-badge ${setStatusClass(selectedAnimal.status)}">${escapeHTML(selectedAnimal.status)}</span></div>
+                <p><strong>Espécie:</strong> ${escapeHTML(selectedAnimal.species)}</p>
+                <p><strong>Raça:</strong> ${escapeHTML(selectedAnimal.breed || 'Não informada')}</p>
+                <p><strong>Sexo:</strong> ${escapeHTML(selectedAnimal.sex || '-')}</p>
+                <p><strong>Local:</strong> ${escapeHTML(selectedAnimal.region || 'Região não informada')}, ${escapeHTML(selectedAnimal.city)}${selectedAnimal.state ? ` - ${escapeHTML(selectedAnimal.state)}` : ''}</p>
+                <p><strong>Descrição:</strong> ${escapeHTML(selectedAnimal.description || '')}</p>
+                <p><small>Última atualização: ${escapeHTML(selectedAnimal.date)}</small></p>
+                ${contactLink}
             </div>
         </div>
     `;
@@ -187,7 +210,9 @@ function handleHashRoute(hash, addToHistory = true) {
         'parceiros': 'tmpl-parceiros',
         'resgate': 'tmpl-resgate',
         'adocao': 'tmpl-adocao',
-        'contato': 'tmpl-contato'
+        'contato': 'tmpl-contato',
+        'conta': 'tmpl-conta',
+        'conversas': 'tmpl-conversas'
     };
 
     const tmplId = map[name];
