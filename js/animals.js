@@ -17,9 +17,9 @@ function createAnimalCard(animal, useDetailsLink = true, compact = false) {
                 <p>${escapeHTML(animal.species)} • ${escapeHTML(animal.city)} - ${escapeHTML(animal.region || 'Região não informada')}</p>
                 <div class="animal-badges">${renderAnimalBadges(animal)}</div>
                 <p><small>Última atualização: ${escapeHTML(animal.date)}</small></p>
-                ${useDetailsLink ? `<a href="#animal?id=${encodeURIComponent(animal.id)}">Ver detalhes</a>` : ''}
-                ${canContactOwner || canDelete ? `
+                ${useDetailsLink || canContactOwner || canDelete ? `
                     <div class="animal-card-actions">
+                        ${useDetailsLink ? `<a class="button button-secondary" href="#animal?id=${encodeURIComponent(animal.id)}">Detalhes</a>` : ''}
                         ${canContactOwner ? `<a class="button button-primary contact-owner-button" href="#conversas?reportId=${encodeURIComponent(animal.id)}">Enviar mensagem ao tutor</a>` : ''}
                         ${canDelete ? `<button class="button button-danger" type="button" data-delete-report="${encodeURIComponent(animal.id)}" data-delete-local="${animal.isLocalReport ? 'true' : 'false'}">Excluir ocorrência</button>` : ''}
                     </div>
