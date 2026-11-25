@@ -1,7 +1,11 @@
 function createAnimalCard(animal, useDetailsLink = true, compact = false) {
     const imagePath = escapeHTML(resolveAssetPath(animal.image));
-    const user = window.achePetBackend?.getCurrentUser();
-    const canContactOwner = compact && animal.status === 'Perdido' && animal.ownerId && animal.ownerId !== user?.id;
+    const backend = window.achePetBackend;
+    const user = backend?.getCurrentUser();
+    const isOwner = Boolean(user?.id && animal.ownerId === user.id);
+    const canDelete = animal.isLocalReport || isOwner;
+    const canContactOwner = compact && backend?.isConfigured && animal.status === 'Perdido'
+        && animal.ownerId && !isOwner;
     return `
         <article class="animal-card${compact ? ' animal-card--compact' : ''}">
             <img src="${imagePath}" alt="Foto de ${escapeHTML(animal.name)}" loading="lazy">
@@ -14,7 +18,12 @@ function createAnimalCard(animal, useDetailsLink = true, compact = false) {
                 <div class="animal-badges">${renderAnimalBadges(animal)}</div>
                 <p><small>Última atualização: ${escapeHTML(animal.date)}</small></p>
                 ${useDetailsLink ? `<a href="#animal?id=${encodeURIComponent(animal.id)}">Ver detalhes</a>` : ''}
-                ${canContactOwner ? `<a class="button button-primary contact-owner-button" href="#conversas?reportId=${encodeURIComponent(animal.id)}">Encontrei seu pet</a>` : ''}
+                ${canContactOwner || canDelete ? `
+                    <div class="animal-card-actions">
+                        ${canContactOwner ? `<a class="button button-primary contact-owner-button" href="#conversas?reportId=${encodeURIComponent(animal.id)}">Enviar mensagem ao tutor</a>` : ''}
+                        ${canDelete ? `<button class="button button-danger" type="button" data-delete-report="${encodeURIComponent(animal.id)}" data-delete-local="${animal.isLocalReport ? 'true' : 'false'}">Excluir ocorrência</button>` : ''}
+                    </div>
+                ` : ''}
             </div>
         </article>
     `;
@@ -162,7 +171,7 @@ function applyAnimalFilters() {
         return;
     }
 
-    container.innerHTML = results.map(createAnimalCard).join('');
+    container.innerHTML = results.map(animal => createAnimalCard(animal, true, true)).join('');
 }
 
 function renderAdoptionList() {

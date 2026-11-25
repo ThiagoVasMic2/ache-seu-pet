@@ -150,6 +150,7 @@ function reportToAnimal(report) {
     return {
         id: report.id,
         ownerId: report.owner_id || report.ownerId || null,
+        isLocalReport: report.source === 'localStorage',
         name: String(report.name || species),
         species,
         type: species,
@@ -173,16 +174,26 @@ function reportToAnimal(report) {
 
 function saveReport(data) {
     const saved = loadReports();
-    saved.unshift(data);
+    const localReport = {...data, source: 'localStorage'};
+    saved.unshift(localReport);
     localStorage.setItem(achePetApp.localKey, JSON.stringify(saved));
-    achePetApp.animals.unshift(reportToAnimal(data));
+    achePetApp.animals.unshift(reportToAnimal(localReport));
 }
 
 function loadReports() {
     return JSON.parse(localStorage.getItem(achePetApp.localKey) || '[]');
 }
 
-achePetApp.animals = loadReports().map(reportToAnimal);
+function deleteLocalReport(reportId) {
+    const reports = loadReports();
+    const remaining = reports.filter(report => String(report.id) !== String(reportId));
+    if (remaining.length === reports.length) return false;
+    localStorage.setItem(achePetApp.localKey, JSON.stringify(remaining));
+    achePetApp.animals = remaining.map(report => reportToAnimal({...report, source: 'localStorage'}));
+    return true;
+}
+
+achePetApp.animals = loadReports().map(report => reportToAnimal({...report, source: 'localStorage'}));
 
 async function loadPublicAnimals() {
     if (window.achePetBackend?.isConfigured) {
@@ -191,7 +202,7 @@ async function loadPublicAnimals() {
         return achePetApp.animals;
     }
 
-    achePetApp.animals = loadReports().map(reportToAnimal);
+    achePetApp.animals = loadReports().map(report => reportToAnimal({...report, source: 'localStorage'}));
     return achePetApp.animals;
 }
 
@@ -221,6 +232,7 @@ window.achePetStore = {
         setStatusClass,
         saveReport,
         loadReports,
+        deleteLocalReport,
         loadPublicAnimals,
         reportToAnimal,
         getQueryParams,

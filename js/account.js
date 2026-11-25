@@ -218,25 +218,35 @@ function initOwnerDashboard() {
         button.setAttribute('aria-expanded', String(!expanded));
         button.textContent = expanded ? 'Ver atividade' : 'Ocultar atividade';
     });
+}
 
-    dashboard.addEventListener('click', async event => {
-        const button = event.target.closest('[data-delete-report]');
-        if (!button) return;
-        const reportId = decodeURIComponent(button.dataset.deleteReport);
-        if (!window.confirm('Retirar esta ocorrência? As conversas ligadas a ela também serão apagadas.')) return;
+document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-delete-report]');
+    if (!button) return;
+    const reportId = decodeURIComponent(button.dataset.deleteReport);
+    const isLocalReport = button.dataset.deleteLocal === 'true';
+    const confirmMessage = isLocalReport
+        ? 'Excluir esta ocorrência salva neste navegador?'
+        : 'Excluir esta ocorrência? As conversas ligadas a ela também serão apagadas.';
+    if (!window.confirm(confirmMessage)) return;
 
-        button.disabled = true;
-        try {
+    button.disabled = true;
+    try {
+        if (isLocalReport) {
+            const deleted = window.achePetStore.helpers.deleteLocalReport(reportId);
+            if (!deleted) throw new Error('Esta ocorrência local não foi encontrada.');
+        } else {
             await window.achePetBackend.deleteReport(reportId);
             achePetApp.animals = achePetApp.animals.filter(animal => String(animal.id) !== reportId);
-            await refreshOwnerDashboard();
-        } catch (error) {
-            console.error('Could not delete report:', error);
-            window.alert(error.message || 'Não foi possível retirar a ocorrência.');
-            button.disabled = false;
         }
-    });
-}
+        if (document.getElementById('animals-results')) applyAnimalFilters();
+        await refreshOwnerDashboard();
+    } catch (error) {
+        console.error('Could not delete report:', error);
+        window.alert(error.message || 'Não foi possível retirar a ocorrência.');
+        button.disabled = false;
+    }
+});
 
 function syncActivitySubscription(user) {
     if (activityChannel) {
