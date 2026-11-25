@@ -106,22 +106,22 @@ function renderAnimalDetail(searchParams) {
         return;
     }
 
-    const imagePath = resolveAssetPath(animal.image);
+    const imagePath = escapeHTML(resolveAssetPath(animal.image));
     container.innerHTML = `
         <div class="card-panel" style="gap:1rem;">
             <div style="flex:1;min-width:280px;">
-                <img src="${imagePath}" alt="${animal.name}" style="width:100%;border-radius:16px;" loading="lazy">
+                <img src="${imagePath}" alt="${escapeHTML(animal.name)}" style="width:100%;border-radius:16px;" loading="lazy">
             </div>
             <div style="flex:2;min-width:280px;">
-                <h2>${animal.name}</h2>
-                <div><span class="status-badge ${setStatusClass(animal.status)}">${animal.status}</span></div>
-                <p><strong>Espécie:</strong> ${animal.species}</p>
-                <p><strong>Raça:</strong> ${animal.breed || 'Não informada'}</p>
-                <p><strong>Sexo:</strong> ${animal.sex || '-'}</p>
-                <p><strong>Local:</strong> ${animal.region}, ${animal.city} - ${animal.state}</p>
-                <p><strong>Descrição:</strong> ${animal.description || ''}</p>
-                <p><strong>Contato:</strong> ${animal.contact || ''}</p>
-                <p><small>Última atualização: ${animal.date}</small></p>
+                <h2>${escapeHTML(animal.name)}</h2>
+                <div><span class="status-badge ${setStatusClass(animal.status)}">${escapeHTML(animal.status)}</span></div>
+                <p><strong>Espécie:</strong> ${escapeHTML(animal.species)}</p>
+                <p><strong>Raça:</strong> ${escapeHTML(animal.breed || 'Não informada')}</p>
+                <p><strong>Sexo:</strong> ${escapeHTML(animal.sex || '-')}</p>
+                <p><strong>Local:</strong> ${escapeHTML(animal.region || 'Região não informada')}, ${escapeHTML(animal.city)}${animal.state ? ` - ${escapeHTML(animal.state)}` : ''}</p>
+                <p><strong>Descrição:</strong> ${escapeHTML(animal.description || '')}</p>
+                <p><strong>Contato:</strong> ${escapeHTML(animal.contact || '')}</p>
+                <p><small>Última atualização: ${escapeHTML(animal.date)}</small></p>
             </div>
         </div>
     `;

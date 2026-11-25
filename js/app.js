@@ -111,6 +111,17 @@ function resolveAssetPath(assetPath) {
     return `${getBasePath()}${assetPath}`;
 }
 
+function escapeHTML(value) {
+    const entities = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+    };
+    return String(value ?? '').replace(/[&<>"']/g, character => entities[character]);
+}
+
 function setStatusClass(status) {
     const normalized = status.toLowerCase().replace(/\s+/g, '-');
     if (normalized.includes('perdido')) return 'status-perdido';
@@ -120,15 +131,57 @@ function setStatusClass(status) {
     return 'status-silvestre';
 }
 
+function reportToAnimal(report) {
+    const species = String(report.species || 'Espécie não identificada');
+    const eventType = String(report.eventType || '');
+    const statusByEvent = {
+        'Meu animal está perdido': {label: 'Perdido', tag: 'perdido'},
+        'Encontrei um animal': {label: 'Encontrado', tag: 'encontrado'},
+        'Encontrei um animal abandonado': {label: 'Abandonado', tag: 'abandonado'},
+        'Vi um animal perdido': {label: 'Perdido', tag: 'perdido'},
+        'Animal silvestre encontrado': {label: 'Silvestre avistado', tag: 'silvestre_avistado'},
+        'Preciso de ajuda para resgate': {label: 'Resgate solicitado', tag: 'resgate_solicitado'}
+    };
+    const status = statusByEvent[eventType] || {label: 'Recebido', tag: 'recebido'};
+    const isWild = eventType === 'Animal silvestre encontrado' || species.toLowerCase().includes('silvestre');
+    const parsedDate = report.date ? new Date(`${report.date}T00:00:00`) : null;
+
+    return {
+        id: report.id,
+        name: String(report.name || species),
+        species,
+        type: species,
+        categoryTags: [isWild ? 'silvestre' : 'domestico'],
+        status: status.label,
+        statusTags: [status.tag],
+        image: 'assets/images/Hero.png',
+        breed: report.breed || '',
+        sex: report.sex || '',
+        color: report.color || '',
+        characteristics: report.characteristics || '',
+        city: report.city || '',
+        region: report.region || '',
+        state: report.state || '',
+        description: report.description || '',
+        contact: report.contact || '',
+        date: parsedDate && !Number.isNaN(parsedDate.getTime())
+            ? parsedDate.toLocaleDateString('pt-BR')
+            : String(report.date || '')
+    };
+}
+
 function saveReport(data) {
-    const saved = JSON.parse(localStorage.getItem(achePetApp.localKey) || '[]');
+    const saved = loadReports();
     saved.unshift(data);
     localStorage.setItem(achePetApp.localKey, JSON.stringify(saved));
+    achePetApp.animals.unshift(reportToAnimal(data));
 }
 
 function loadReports() {
     return JSON.parse(localStorage.getItem(achePetApp.localKey) || '[]');
 }
+
+achePetApp.animals = loadReports().map(reportToAnimal);
 
 function animateSections() {
     document.querySelectorAll('.section, .card-panel').forEach((section, index) => {

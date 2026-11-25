@@ -1,17 +1,17 @@
 function createAnimalCard(animal, useDetailsLink = true) {
-    const imagePath = resolveAssetPath(animal.image);
+    const imagePath = escapeHTML(resolveAssetPath(animal.image));
     return `
         <article class="animal-card">
-            <img src="${imagePath}" alt="Foto de ${animal.name}" loading="lazy">
+            <img src="${imagePath}" alt="Foto de ${escapeHTML(animal.name)}" loading="lazy">
             <div class="animal-card-content">
                 <div>
-                    <h3>${animal.name}</h3>
-                    <span class="status-badge ${setStatusClass(animal.status)}">${animal.status}</span>
+                    <h3>${escapeHTML(animal.name)}</h3>
+                    <span class="status-badge ${setStatusClass(animal.status)}">${escapeHTML(animal.status)}</span>
                 </div>
-                <p>${animal.species} • ${animal.city} - ${animal.region}</p>
+                <p>${escapeHTML(animal.species)} • ${escapeHTML(animal.city)} - ${escapeHTML(animal.region || 'Região não informada')}</p>
                 <div class="animal-badges">${renderAnimalBadges(animal)}</div>
-                <p><small>Última atualização: ${animal.date}</small></p>
-                ${useDetailsLink ? `<a href="#animal?id=${animal.id}">Ver detalhes</a>` : ''}
+                <p><small>Última atualização: ${escapeHTML(animal.date)}</small></p>
+                ${useDetailsLink ? `<a href="#animal?id=${encodeURIComponent(animal.id)}">Ver detalhes</a>` : ''}
             </div>
         </article>
     `;
@@ -70,10 +70,10 @@ function renderAnimalBadges(animal) {
         ...(animal.diet || []),
         ...(animal.habitat || []),
         ...(animal.statusTags || [])
-    ];
+    ].filter(Boolean);
 
     return [...new Set(values)].map(value => `
-        <span class="info-badge">${labelMap[value] || value.toUpperCase()}</span>
+        <span class="info-badge">${escapeHTML(labelMap[value] || String(value).toUpperCase())}</span>
     `).join('');
 }
 

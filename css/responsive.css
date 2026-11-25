@@ -4,7 +4,7 @@
 
 @media (min-width: 992px) {
     .header-actions {
-        gap: 1.25rem;
+        gap: 0.65rem;
     }
 
     .hero-visual {
@@ -14,6 +14,10 @@
 
 @media (max-width: 900px) {
     .category-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .workflow-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
@@ -47,6 +51,7 @@
     .site-nav {
         order: 3;
         flex-basis: 100%;
+        justify-content: center;
     }
 }
 
@@ -69,6 +74,10 @@
     }
 
     .category-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .workflow-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
@@ -107,6 +116,7 @@
         min-width: 0;
         padding: 0.75rem 0.9rem;
         text-align: center;
+        white-space: normal;
     }
 
     .report-fields,
@@ -121,5 +131,11 @@
 
     .report-submit .button {
         width: 100%;
+    }
+}
+
+@media (max-width: 450px) {
+    .workflow-grid {
+        grid-template-columns: minmax(0, 1fr);
     }
 }

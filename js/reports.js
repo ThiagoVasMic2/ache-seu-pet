@@ -28,7 +28,7 @@ function initReportForm() {
         };
 
         saveReport(report);
-        alert('Ocorrência registrada localmente. Em uma versão futura, ela será enviada para um backend seguro.');
+        alert('Ocorrência registrada e disponível na busca deste navegador.');
         form.reset();
     };
 

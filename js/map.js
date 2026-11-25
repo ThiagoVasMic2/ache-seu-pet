@@ -18,14 +18,14 @@ function initMap() {
     let markers = [];
 
     function buildPopup(animal) {
-        const imagePath = resolveAssetPath(animal.image);
+        const imagePath = escapeHTML(resolveAssetPath(animal.image));
         return `
             <div style="max-width:220px;">
-                <img src="${imagePath}" alt="${animal.name}" style="width:100%;border-radius:12px;margin-bottom:0.75rem;" loading="lazy">
-                <strong>${animal.name}</strong>
-                <p style="margin:0.35rem 0 0.45rem;color:#4D5B6B;font-size:0.95rem;">${animal.species} • ${animal.status}</p>
-                <p style="margin:0 0 0.6rem;font-size:0.95rem;">${animal.region}, ${animal.city}</p>
-                <a href="#animal?id=${animal.id}" style="display:inline-block;padding:0.6rem 0.85rem;background:#245C45;color:#fff;border-radius:999px;text-decoration:none;font-size:0.95rem;">Ver ocorrência</a>
+                <img src="${imagePath}" alt="${escapeHTML(animal.name)}" style="width:100%;border-radius:12px;margin-bottom:0.75rem;" loading="lazy">
+                <strong>${escapeHTML(animal.name)}</strong>
+                <p style="margin:0.35rem 0 0.45rem;color:#4D5B6B;font-size:0.95rem;">${escapeHTML(animal.species)} • ${escapeHTML(animal.status)}</p>
+                <p style="margin:0 0 0.6rem;font-size:0.95rem;">${escapeHTML(animal.region || 'Região não informada')}, ${escapeHTML(animal.city)}</p>
+                <a href="#animal?id=${encodeURIComponent(animal.id)}" style="display:inline-block;padding:0.6rem 0.85rem;background:#245C45;color:#fff;border-radius:999px;text-decoration:none;font-size:0.95rem;">Ver ocorrência</a>
             </div>
         `;
     }
@@ -37,8 +37,13 @@ function initMap() {
         achePetApp.animals.forEach(animal => {
             if (filterStatus && animal.status !== filterStatus) return;
             if (filterType && animal.type !== filterType) return;
+            const lat = Number(animal.lat);
+            const lng = Number(animal.lng);
+            if (animal.lat == null || animal.lat === '' || animal.lng == null || animal.lng === ''
+                || !Number.isFinite(lat) || !Number.isFinite(lng)
+                || lat < -90 || lat > 90 || lng < -180 || lng > 180) return;
             const icon = icons[animal.status] || icons['Animal silvestre'];
-            const marker = L.marker([animal.lat, animal.lng], { icon }).addTo(map);
+            const marker = L.marker([lat, lng], { icon }).addTo(map);
             marker.bindPopup(buildPopup(animal));
             markers.push(marker);
         });
