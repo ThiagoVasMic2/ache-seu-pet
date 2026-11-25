@@ -80,7 +80,9 @@ function renderAnimalBadges(animal) {
 function getSelectedValues(selectId) {
     const select = document.getElementById(selectId);
     if (!select) return [];
-    return Array.from(select.selectedOptions).map(option => option.value);
+    return Array.from(select.selectedOptions)
+        .map(option => option.value)
+        .filter(Boolean);
 }
 
 function arrayMatchesFilter(selectedValues, itemValues) {
@@ -89,35 +91,88 @@ function arrayMatchesFilter(selectedValues, itemValues) {
     return selectedValues.some(value => itemValues.includes(value));
 }
 
+function statusFilterValue(status) {
+    const normalized = String(status || '').trim().toLowerCase();
+    const values = {
+        'em adoção': 'para_adocao',
+        'resgate solicitado': 'resgate_solicitado',
+        'silvestre avistado': 'silvestre_avistado'
+    };
+    return values[normalized] || normalized.replace(/\s+/g, '_');
+}
+
+function getAnimalSearchParams() {
+    const hashQueryIndex = window.location.hash.indexOf('?');
+    if (window.location.hash.startsWith('#animais') && hashQueryIndex >= 0) {
+        return new URLSearchParams(window.location.hash.slice(hashQueryIndex + 1));
+    }
+    return new URLSearchParams(window.location.search);
+}
+
+function applyAnimalSearchParams() {
+    const params = getAnimalSearchParams();
+    const type = document.getElementById('filter-type');
+    const status = document.getElementById('filter-status');
+    const category = document.getElementById('filter-category');
+    const city = document.getElementById('filter-city');
+
+    if (type && params.has('type')) type.value = params.get('type');
+    if (category && params.has('category')) category.value = params.get('category');
+    if (city && params.has('city')) city.value = params.get('city');
+
+    const statusValue = params.get('situation') || params.get('status');
+    if (status && statusValue) status.value = statusFilterValue(statusValue);
+}
+
 function applyAnimalFilters() {
     const categoryValues = getSelectedValues('filter-category');
+    const typeValue = document.getElementById('filter-type')?.value.trim().toLowerCase();
     const classValues = getSelectedValues('filter-class');
     const movementValues = getSelectedValues('filter-movement');
     const dietValues = getSelectedValues('filter-diet');
     const habitatValues = getSelectedValues('filter-habitat');
     const statusValues = getSelectedValues('filter-status');
-    const cityValue = document.getElementById('filter-city')?.value.trim().toLowerCase();
+    const cityValue = document.getElementById('filter-city')?.value.trim().toLowerCase() || '';
 
     const results = achePetApp.animals.filter(animal => {
+        const species = String(animal.species || animal.type || '').trim().toLowerCase();
+        const matchesType = !typeValue || (typeValue === 'outro'
+            ? !['cachorro', 'gato', 'animal silvestre'].includes(species)
+            : species === typeValue);
         const matchesCategory = arrayMatchesFilter(categoryValues, animal.categoryTags || [animal.category]);
         const matchesClass = arrayMatchesFilter(classValues, animal.classTags || []);
         const matchesMovement = arrayMatchesFilter(movementValues, animal.movement || []);
         const matchesDiet = arrayMatchesFilter(dietValues, animal.diet || []);
         const matchesHabitat = arrayMatchesFilter(habitatValues, animal.habitat || []);
-        const matchesStatus = arrayMatchesFilter(statusValues, animal.statusTags || []);
-        const matchesCity = cityValue ? animal.city.toLowerCase().includes(cityValue) : true;
-        return matchesCategory && matchesClass && matchesMovement && matchesDiet && matchesHabitat && matchesStatus && matchesCity;
+        const statuses = animal.statusTags || (animal.status ? [statusFilterValue(animal.status)] : []);
+        const matchesStatus = arrayMatchesFilter(statusValues, statuses);
+        const matchesCity = cityValue ? String(animal.city || '').toLowerCase().includes(cityValue) : true;
+        return matchesType && matchesCategory && matchesClass && matchesMovement && matchesDiet && matchesHabitat && matchesStatus && matchesCity;
     });
 
     const container = document.getElementById('animals-results');
     if (!container) return;
-    container.innerHTML = results.length ? results.map(createAnimalCard).join('') : '<p>Nenhum animal encontrado com esses filtros.</p>';
+    if (!results.length) {
+        container.textContent = achePetApp.animals.length
+            ? 'Nenhum animal encontrado com esses filtros.'
+            : 'Ainda não há ocorrências cadastradas.';
+        return;
+    }
+
+    container.innerHTML = results.map(createAnimalCard).join('');
 }
 
 function renderAdoptionList() {
     const container = document.getElementById('adoption-list');
     if (!container) return;
-    const adoptionAnimals = achePetApp.animals.filter(item => item.status === 'Em Adoção');
+    const cityValue = document.getElementById('adoption-filter-city')?.value.trim().toLowerCase() || '';
+    const speciesValue = document.getElementById('adoption-filter-species')?.value.toLowerCase() || '';
+    const adoptionAnimals = achePetApp.animals.filter(item => {
+        const matchesStatus = item.status === 'Em Adoção' || (item.statusTags || []).includes('para_adocao');
+        const matchesSpecies = !speciesValue || String(item.species || '').toLowerCase() === speciesValue;
+        const matchesCity = !cityValue || String(item.city || '').toLowerCase().includes(cityValue);
+        return matchesStatus && matchesSpecies && matchesCity;
+    });
     container.innerHTML = adoptionAnimals.length ? adoptionAnimals.map(animal => createAnimalCard(animal)).join('') : '<p>Nenhum animal disponível para adoção no momento.</p>';
 }
 
@@ -138,8 +193,12 @@ function renderPartnersList() {
 function hydrateAnimalPage() {
     const cardContainer = document.getElementById('animals-results');
     if (!cardContainer) return;
+    applyAnimalSearchParams();
+    initAdvancedToggle();
     applyAnimalFilters();
     const form = document.getElementById('animal-search-form');
+    if (form?.dataset.filtersInitialized === 'true') return;
+    if (form) form.dataset.filtersInitialized = 'true';
     form?.addEventListener('submit', event => {
         event.preventDefault();
         applyAnimalFilters();
@@ -147,6 +206,7 @@ function hydrateAnimalPage() {
 
     const filterInputs = [
         'filter-category',
+        'filter-type',
         'filter-class',
         'filter-movement',
         'filter-diet',
@@ -168,17 +228,18 @@ function hydrateAdoptionPage() {
     renderAdoptionList();
     const cityInput = document.getElementById('adoption-filter-city');
     const speciesSelect = document.getElementById('adoption-filter-species');
-    const ageSelect = document.getElementById('adoption-filter-age');
 
-    [cityInput, speciesSelect, ageSelect].forEach(input => {
-        input?.addEventListener('input', renderAdoptionList);
-    });
+    if (container.dataset.filtersInitialized === 'true') return;
+    container.dataset.filtersInitialized = 'true';
+    cityInput?.addEventListener('input', renderAdoptionList);
+    speciesSelect?.addEventListener('change', renderAdoptionList);
 }
 
 function initAdvancedToggle() {
     const btn = document.getElementById('toggle-advanced');
     const adv = document.getElementById('advanced-filters');
-    if (!btn || !adv) return;
+    if (!btn || !adv || btn.dataset.initialized === 'true') return;
+    btn.dataset.initialized = 'true';
     btn.addEventListener('click', () => {
         const isHidden = adv.hasAttribute('hidden');
         if (isHidden) {

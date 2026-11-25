@@ -2,6 +2,11 @@ function renderHomeCards() {
     const grid = document.querySelector('.home-animal-grid');
     if (!grid) return;
     const featured = achePetApp.animals.filter(item => item.status === 'Em Adoção').slice(0, 4);
+    if (!featured.length) {
+        grid.innerHTML = '<p>Ainda não há animais cadastrados para adoção.</p>';
+        return;
+    }
+
     grid.innerHTML = featured.map(animal => `
         <article class="animal-card">
             <img src="${animal.image}" alt="Foto de ${animal.name}">
@@ -33,11 +38,14 @@ function renderPartnerPreview() {
 
 function handleSearchSubmit() {
     const form = document.getElementById('search-form');
-    form?.addEventListener('submit', event => {
+    if (!form || form.dataset.searchInitialized === 'true') return;
+
+    form.dataset.searchInitialized = 'true';
+    form.addEventListener('submit', event => {
         event.preventDefault();
         const params = new URLSearchParams(new FormData(form));
-        const url = `#animais?${params.toString()}`;
-        window.location.href = url;
+        const query = params.toString();
+        window.location.hash = query ? `animais?${query}` : 'animais';
     });
 }
 

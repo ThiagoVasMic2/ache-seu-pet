@@ -83,6 +83,10 @@ async function initForPath(absoluteUrl) {
         if (typeof initReportForm === 'function') initReportForm();
     } else if (path.endsWith('/pages/mapa.html') || path.endsWith('/mapa.html')) {
         if (typeof initMap === 'function') initMap();
+    } else if (path.endsWith('/pages/adocao.html') || path.endsWith('/adocao.html')) {
+        if (typeof hydrateAdoptionPage === 'function') hydrateAdoptionPage();
+    } else if (path.endsWith('/pages/parceiros.html') || path.endsWith('/parceiros.html')) {
+        if (typeof renderPartnersList === 'function') renderPartnersList();
     } else if (path.endsWith('/pages/animal.html') || path.endsWith('/animal.html')) {
         renderAnimalDetail(url.searchParams);
     } else if (path === '/' || path.endsWith('index.html')) {
@@ -151,8 +155,9 @@ document.addEventListener('click', event => {
 
 // handle back/forward (history)
 window.addEventListener('popstate', () => {
-    // prefer loading by pathname for popstate
-    loadPage(location.pathname + location.search, false);
+    if (!location.hash) {
+        loadPage(location.pathname + location.search, false);
+    }
 });
 
 // handle hash changes (direct navigation to #hash or redirects)

@@ -9,10 +9,10 @@
     <meta property="og:description" content="Encontre animais perdidos, registre animais encontrados e conecte-se a redes de resgate, proteção e adoção.">
     <meta property="og:type" content="website">
     <meta property="og:image" content="assets/logo/Ache-seu-Pet-Logo.png">
-    <link rel="icon" href="assets/logo/Ache-seu-Pet.png" type="image/png">
+    <link rel="icon" href="assets/logo/ache-seu-pet.png" type="image/png">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+q1x2Lk+Cq2nfzGxN0r+Z5N98hi+M1j9ZaN5MMF0A=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
 </head>
 <body>
     <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
@@ -66,6 +66,16 @@
                         </select>
                     </div>
                     <div class="form-row">
+                        <label for="filter-type">Espécie</label>
+                        <select id="filter-type" name="type">
+                            <option value="">Todas</option>
+                            <option value="Cachorro">Cachorro</option>
+                            <option value="Gato">Gato</option>
+                            <option value="Animal silvestre">Animal silvestre</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="form-row">
                         <label for="filter-status">Situação</label>
                         <select id="filter-status" name="status">
                             <option value="">Todas</option>
@@ -85,16 +95,6 @@
                     <div class="form-row">
                         <label for="filter-city">Cidade</label>
                         <input type="text" id="filter-city" name="city" placeholder="Digite a cidade">
-                    </div>
-                    <div class="form-row">
-                        <label for="filter-radius">Raio</label>
-                        <select id="filter-radius" name="radius">
-                            <option value="1">1 km</option>
-                            <option value="5" selected>5 km</option>
-                            <option value="10">10 km</option>
-                            <option value="25">25 km</option>
-                            <option value="50">50 km</option>
-                        </select>
                     </div>
                     <div class="form-row">
                         <button type="button" id="toggle-advanced" class="button button-secondary" aria-expanded="false">Mostrar filtros avançados</button>
@@ -165,77 +165,99 @@
     <template id="tmpl-cadastrar" data-title="Cadastrar Animal | Ache Seu Pet">
         <section class="section">
             <div class="container">
-                <div class="section-heading">
+                <div class="section-heading report-heading">
                     <span class="eyebrow">Registre uma ocorrência</span>
-                    <h2>Ajude a proteger o animal com informações claras</h2>
+                    <h2>Conte o que aconteceu</h2>
                 </div>
-                <p>Por segurança, sua localização exata não será exibida publicamente.</p>
-                <form id="report-form" class="search-form" aria-label="Formulário de cadastro de ocorrência">
-                    <fieldset>
-                        <legend>O que aconteceu?</legend>
-                        <label><input type="radio" name="eventType" value="Meu animal está perdido" required> Meu animal está perdido</label>
-                        <label><input type="radio" name="eventType" value="Encontrei um animal"> Encontrei um animal</label>
-                        <label><input type="radio" name="eventType" value="Encontrei um animal abandonado"> Encontrei um animal abandonado</label>
-                        <label><input type="radio" name="eventType" value="Vi um animal perdido"> Vi um animal perdido</label>
-                        <label><input type="radio" name="eventType" value="Animal silvestre encontrado"> Animal silvestre encontrado</label>
-                        <label><input type="radio" name="eventType" value="Preciso de ajuda para resgate"> Preciso de ajuda para resgate</label>
+                <p class="report-intro">Preencha as informações que souber. Os campos com * são obrigatórios. Mostraremos apenas uma localização aproximada.</p>
+                <form id="report-form" class="search-form report-form" aria-label="Formulário de cadastro de ocorrência">
+                    <fieldset class="report-section report-event-section">
+                        <legend>1. Qual situação você quer registrar? *</legend>
+                        <div class="event-options">
+                            <label class="event-option"><input type="radio" name="eventType" value="Meu animal está perdido" required><span>Meu animal está perdido</span></label>
+                            <label class="event-option"><input type="radio" name="eventType" value="Encontrei um animal"><span>Encontrei um animal</span></label>
+                            <label class="event-option"><input type="radio" name="eventType" value="Encontrei um animal abandonado"><span>Encontrei um animal abandonado</span></label>
+                            <label class="event-option"><input type="radio" name="eventType" value="Vi um animal perdido"><span>Vi um animal perdido</span></label>
+                            <label class="event-option"><input type="radio" name="eventType" value="Animal silvestre encontrado"><span>Animal silvestre encontrado</span></label>
+                            <label class="event-option"><input type="radio" name="eventType" value="Preciso de ajuda para resgate"><span>Preciso de ajuda para resgate</span></label>
+                        </div>
                     </fieldset>
-                    <div class="form-row">
-                        <label for="animal-name">Nome do animal</label>
-                        <input id="animal-name" name="name" type="text" required>
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-species">Espécie</label>
-                        <input id="animal-species" name="species" type="text" required placeholder="Cachorro, Gato, Animal silvestre">
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-breed">Raça</label>
-                        <input id="animal-breed" name="breed" type="text" placeholder="SRD, Siamês, Labrador">
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-sex">Sexo</label>
-                        <select id="animal-sex" name="sex" required>
-                            <option value="">Selecione</option>
-                            <option value="Macho">Macho</option>
-                            <option value="Fêmea">Fêmea</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-color">Cor</label>
-                        <input id="animal-color" name="color" type="text" placeholder="Ex: marrom e branco">
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-characteristics">Características</label>
-                        <input id="animal-characteristics" name="characteristics" type="text" placeholder="Ex: coleira verde, orelhas grandes">
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-date">Data</label>
-                        <input id="animal-date" name="date" type="date" required>
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-city">Cidade</label>
-                        <input id="animal-city" name="city" type="text" required>
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-region">Bairro / região</label>
-                        <input id="animal-region" name="region" type="text" required>
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-photos">Fotos (opcional)</label>
-                        <input id="animal-photos" name="photos" type="file" accept="image/*" multiple>
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-description">Descrição</label>
-                        <textarea id="animal-description" name="description" rows="5" required></textarea>
-                    </div>
-                    <div class="form-row">
-                        <label for="animal-contact">Forma de contato</label>
-                        <input id="animal-contact" name="contact" type="text" required placeholder="Telefone, e-mail ou instituição">
-                    </div>
-                    <div class="form-row form-actions">
+
+                    <fieldset class="report-section">
+                        <legend>2. Sobre o animal</legend>
+                        <div class="report-fields">
+                            <div class="form-row">
+                                <label for="animal-name">Nome (se souber)</label>
+                                <input id="animal-name" name="name" type="text" placeholder="Ex.: Bob">
+                            </div>
+                            <div class="form-row">
+                                <label for="animal-species">Espécie *</label>
+                                <input id="animal-species" name="species" type="text" required placeholder="Ex.: cachorro, gato ou não identificada">
+                            </div>
+                            <div class="form-row">
+                                <label for="animal-breed">Raça (opcional)</label>
+                                <input id="animal-breed" name="breed" type="text" placeholder="Ex.: SRD, Siamês">
+                            </div>
+                            <div class="form-row">
+                                <label for="animal-sex">Sexo (se souber)</label>
+                                <select id="animal-sex" name="sex">
+                                    <option value="">Não sei informar</option>
+                                    <option value="Macho">Macho</option>
+                                    <option value="Fêmea">Fêmea</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <label for="animal-color">Cor</label>
+                                <input id="animal-color" name="color" type="text" placeholder="Ex.: marrom e branco">
+                            </div>
+                            <div class="form-row">
+                                <label for="animal-characteristics">Como reconhecer?</label>
+                                <input id="animal-characteristics" name="characteristics" type="text" placeholder="Coleira, manchas, porte...">
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="report-section">
+                        <legend>3. Quando e onde aconteceu?</legend>
+                        <div class="report-fields report-location-fields">
+                            <div class="form-row">
+                                <label for="animal-date">Data *</label>
+                                <input id="animal-date" name="date" type="date" required>
+                            </div>
+                            <div class="form-row">
+                                <label for="animal-city">Cidade *</label>
+                                <input id="animal-city" name="city" type="text" required placeholder="Ex.: São Paulo">
+                            </div>
+                            <div class="form-row">
+                                <label for="animal-region">Bairro ou região</label>
+                                <input id="animal-region" name="region" type="text" placeholder="Opcional">
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <fieldset class="report-section">
+                        <legend>4. Descrição e contato</legend>
+                        <div class="report-fields">
+                            <div class="form-row report-full-width">
+                                <label for="animal-description">Conte mais detalhes *</label>
+                                <textarea id="animal-description" name="description" rows="4" required placeholder="Descreva o que aconteceu, o comportamento e outros detalhes importantes."></textarea>
+                            </div>
+                            <div class="form-row report-full-width">
+                                <label for="animal-contact">Como podemos entrar em contato? *</label>
+                                <input id="animal-contact" name="contact" type="text" required placeholder="Telefone, e-mail ou instituição">
+                            </div>
+                            <div class="form-row report-full-width">
+                                <label for="animal-photos">Fotos (opcional)</label>
+                                <input id="animal-photos" name="photos" type="file" accept="image/*" multiple>
+                                <small class="field-note">Nesta versão de demonstração, as fotos ainda não são enviadas nem armazenadas.</small>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <div class="report-submit">
                         <button type="submit" class="button button-primary">Enviar ocorrência</button>
+                        <small>O envio desta demonstração fica salvo apenas neste navegador.</small>
                     </div>
-                    <p class="field-note">Por segurança, sua localização exata não será exibida publicamente.</p>
                 </form>
             </div>
         </section>
@@ -370,14 +392,6 @@
                         </select>
                     </div>
                     <div class="form-row">
-                        <label for="adoption-filter-age">Idade</label>
-                        <select id="adoption-filter-age">
-                            <option value="">Todos</option>
-                            <option value="Filhote">Filhote</option>
-                            <option value="Adulto">Adulto</option>
-                        </select>
-                    </div>
-                    <div class="form-row">
                         <label for="adoption-filter-city">Cidade</label>
                         <input id="adoption-filter-city" type="text" placeholder="Ex: São Paulo">
                     </div>
@@ -441,7 +455,7 @@
             <div class="container">
                 <div class="section-heading">
                     <span class="eyebrow">Você está procurando um animal?</span>
-                    <h2>Encontre ocorrências próximas com filtros rápidos</h2>
+                    <h2>Encontre ocorrências por tipo, situação e cidade</h2>
                 </div>
                 <form class="search-form" id="search-form" aria-label="Buscar animais">
                     <div class="form-row">
@@ -469,16 +483,6 @@
                         <label for="city">Cidade</label>
                         <input type="text" id="city" name="city" placeholder="São Paulo">
                     </div>
-                    <div class="form-row">
-                        <label for="radius">Raio</label>
-                        <select id="radius" name="radius">
-                            <option value="1">1 km</option>
-                            <option value="5" selected>5 km</option>
-                            <option value="10">10 km</option>
-                            <option value="25">25 km</option>
-                            <option value="50">50 km</option>
-                        </select>
-                    </div>
                     <div class="form-row form-actions">
                         <button type="submit" class="button button-primary">Buscar</button>
                         <a href="#animais" class="button button-secondary">Ver todas</a>
@@ -495,27 +499,27 @@
                 </div>
                 <div class="category-grid">
                     <a href="#animais" class="category-card">
-                        <img src="assets/images/Animal-Doméstico.png" alt="Animais domésticos">
+                        <img src="assets/images/Doméstico.png" alt="Animais domésticos">
                         <h3>Doméstico</h3>
                         <p>Encontre cães, gatos e outros animais que convivem com as pessoas.</p>
                     </a>
                     <a href="#animais" class="category-card">
-                        <img src="assets/images/Animal-Silvestre.png" alt="Animal silvestre">
+                        <img src="assets/images/Silvestre.png" alt="Animal silvestre">
                         <h3>Silvestre</h3>
                         <p>Ajude a identificar e proteger animais da fauna silvestre.</p>
                     </a>
                     <a href="#animais" class="category-card">
-                        <img src="assets/images/Animal-Réptil.png" alt="Réptil">
+                        <img src="assets/images/Réptil.png" alt="Réptil">
                         <h3>Réptil</h3>
                         <p>Encontre e identifique répteis que precisam de ajuda.</p>
                     </a>
                     <a href="#animais" class="category-card">
-                        <img src="assets/images/Animal-Aquático.png" alt="Animal aquático">
+                        <img src="assets/images/Aquático.png" alt="Animal aquático">
                         <h3>Aquático</h3>
                         <p>Ajude animais encontrados em rios, lagos, mares e outros ambientes aquáticos.</p>
                     </a>
                     <a href="#animais" class="category-card">
-                        <img src="assets/images/Animal-Anfíbio.png" alt="Anfíbio">
+                        <img src="assets/images/Anfíbio.png" alt="Anfíbio">
                         <h3>Anfíbio</h3>
                         <p>Ajude a proteger sapos, rãs e outros anfíbios.</p>
                     </a>
@@ -601,7 +605,7 @@
         <div class="container footer-grid">
             <div>
                 <a href="index.html" class="brand-footer">
-                    <img src="assets/logo/Ache-seu-Pet.png" alt="Ache Seu Pet" class="brand-mark-small">
+                    <img src="assets/logo/ache-seu-pet.png" alt="Ache Seu Pet" class="brand-mark-small">
                     <span>ACHE SEU PET</span>
                 </a>
                 <p>Conectando pessoas, protegendo animais.</p>
@@ -621,7 +625,7 @@
         </div>
     </footer>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7w4HjF3sNnb+gV4FSY1HU9O7l5/4qk6F8CBpYE=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script src="js/app.js"></script>
     <script src="js/home.js"></script>
     <script src="js/animals.js"></script>

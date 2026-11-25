@@ -12,9 +12,19 @@
     }
 }
 
+@media (max-width: 900px) {
+    .category-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 600px) {
     .search-form {
         grid-template-columns: 1fr;
+    }
+
+    .category-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .form-row input,
@@ -30,5 +40,31 @@
     .card-panel {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .header-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+    }
+
+    .header-actions .button {
+        min-width: 0;
+        padding: 0.75rem 0.9rem;
+        text-align: center;
+    }
+
+    .report-fields,
+    .report-location-fields,
+    .event-options {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    #map {
+        min-height: 320px;
+    }
+
+    .report-submit .button {
+        width: 100%;
     }
 }
