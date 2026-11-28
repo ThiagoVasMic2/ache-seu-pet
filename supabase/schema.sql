@@ -21,6 +21,7 @@ create table if not exists public.reports (
     city text not null check (length(trim(city)) between 1 and 100),
     region text not null default '' check (length(region) <= 100),
     description text not null check (length(trim(description)) between 1 and 3000),
+    photo_path text,
     status text generated always as (
         case event_type
             when 'Meu animal está perdido' then 'Perdido'
@@ -33,6 +34,8 @@ create table if not exists public.reports (
     ) stored,
     created_at timestamptz not null default now()
 );
+
+alter table public.reports add column if not exists photo_path text;
 
 create table if not exists public.conversations (
     id uuid primary key default gen_random_uuid(),
@@ -63,6 +66,10 @@ alter table public.reports enable row level security;
 alter table public.conversations enable row level security;
 alter table public.messages enable row level security;
 
+insert into storage.buckets (id, name, public)
+values ('report-photos', 'report-photos', true)
+on conflict (id) do update set public = excluded.public;
+
 grant usage on schema public to anon, authenticated;
 grant select on public.reports to anon, authenticated;
 grant insert, update, delete on public.reports to authenticated;
@@ -89,6 +96,27 @@ drop policy if exists "Owners can delete their reports" on public.reports;
 create policy "Owners can delete their reports"
     on public.reports for delete
     using (owner_id = (select auth.uid()));
+
+drop policy if exists "Anyone can view report photos" on storage.objects;
+create policy "Anyone can view report photos"
+    on storage.objects for select
+    using (bucket_id = 'report-photos');
+
+drop policy if exists "Users can upload their own report photos" on storage.objects;
+create policy "Users can upload their own report photos"
+    on storage.objects for insert to authenticated
+    with check (
+        bucket_id = 'report-photos'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+    );
+
+drop policy if exists "Users can delete their own report photos" on storage.objects;
+create policy "Users can delete their own report photos"
+    on storage.objects for delete to authenticated
+    using (
+        bucket_id = 'report-photos'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+    );
 
 drop policy if exists "Participants can read conversations" on public.conversations;
 create policy "Participants can read conversations"

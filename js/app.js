@@ -108,6 +108,7 @@ function getBasePath() {
 }
 
 function resolveAssetPath(assetPath) {
+    if (/^(?:data:|blob:|https?:|\/)/i.test(assetPath)) return assetPath;
     return `${getBasePath()}${assetPath}`;
 }
 
@@ -157,7 +158,7 @@ function reportToAnimal(report) {
         categoryTags: [isWild ? 'silvestre' : 'domestico'],
         status: status.label,
         statusTags: [status.tag],
-        image: 'assets/images/Hero.png',
+        image: report.photo_url || report.photo_data_url || 'assets/images/Hero.png',
         breed: report.breed || '',
         sex: report.sex || '',
         color: report.color || '',

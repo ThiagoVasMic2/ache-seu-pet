@@ -9,7 +9,7 @@ function renderHomeCards() {
 
     grid.innerHTML = featured.map(animal => `
         <article class="animal-card">
-            <img src="${animal.image}" alt="Foto de ${animal.name}">
+            <img src="${escapeHTML(resolveAssetPath(animal.image))}" alt="Foto de ${escapeHTML(animal.name)}">
             <div class="animal-card-content">
                 <div>
                     <h3>${animal.name}</h3>

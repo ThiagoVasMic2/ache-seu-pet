@@ -80,7 +80,13 @@ async function listReports() {
         .select('*')
         .order('created_at', {ascending: false});
     if (error) throw error;
-    return data;
+    return data.map(addReportPhotoUrl);
+}
+
+function addReportPhotoUrl(report) {
+    if (!report.photo_path) return report;
+    const {data} = supabaseClient.storage.from('report-photos').getPublicUrl(report.photo_path);
+    return {...report, photo_url: data.publicUrl};
 }
 
 async function getReport(reportId) {
@@ -91,10 +97,10 @@ async function getReport(reportId) {
         .eq('id', reportId)
         .maybeSingle();
     if (error) throw error;
-    return data;
+    return data ? addReportPhotoUrl(data) : null;
 }
 
-async function createReport(fields) {
+async function createReport(fields, photoFile = null) {
     const user = await requireUser();
     const report = {
         owner_id: user.id,
@@ -116,7 +122,47 @@ async function createReport(fields) {
         .select('*')
         .single();
     if (error) throw error;
-    return data;
+
+    if (!photoFile) return data;
+
+    const photoPath = `${user.id}/${data.id}.jpg`;
+    const storage = supabaseClient.storage.from('report-photos');
+    let uploadError;
+    try {
+        ({error: uploadError} = await storage.upload(photoPath, photoFile, {
+            contentType: 'image/jpeg',
+            upsert: false
+        }));
+    } catch (error) {
+        uploadError = error;
+    }
+    if (uploadError) {
+        throw Object.assign(new Error(`Ocorrência publicada, mas a foto não foi enviada: ${uploadError.message}`), {
+            reportCreated: true,
+            report: data
+        });
+    }
+
+    const {data: updatedReport, error: updateError} = await supabaseClient
+        .from('reports')
+        .update({photo_path: photoPath})
+        .eq('id', data.id)
+        .eq('owner_id', user.id)
+        .select('*')
+        .single();
+    if (updateError) {
+        try {
+            const {error: cleanupError} = await storage.remove([photoPath]);
+            if (cleanupError) console.error('Could not clean up an unlinked report photo:', cleanupError);
+        } catch (cleanupError) {
+            console.error('Could not clean up an unlinked report photo:', cleanupError);
+        }
+        throw Object.assign(new Error(`Ocorrência publicada, mas a foto não foi vinculada: ${updateError.message}`), {
+            reportCreated: true,
+            report: data
+        });
+    }
+    return addReportPhotoUrl(updatedReport);
 }
 
 async function listOwnReports() {
@@ -127,7 +173,7 @@ async function listOwnReports() {
         .eq('owner_id', user.id)
         .order('created_at', {ascending: false});
     if (error) throw error;
-    return data;
+    return data.map(addReportPhotoUrl);
 }
 
 async function deleteReport(reportId) {

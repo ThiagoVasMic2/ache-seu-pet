@@ -215,6 +215,7 @@
                 <div class="section-heading" style="margin-top:2rem;">
                     <h2>Resultados</h2>
                 </div>
+                <p id="animal-search-notice" class="form-notice" role="status" aria-live="polite" hidden></p>
                 <div class="animal-grid" id="animals-results"></div>
             </div>
         </section>
@@ -302,9 +303,9 @@
                                 <textarea id="animal-description" name="description" rows="4" maxlength="3000" required placeholder="Descreva o que aconteceu, o comportamento e outros detalhes importantes."></textarea>
                             </div>
                             <div class="form-row report-full-width">
-                                <label for="animal-photos">Fotos (opcional)</label>
-                                <input id="animal-photos" name="photos" type="file" accept="image/*" multiple>
-                                <small class="field-note">As fotos ainda não são armazenadas no sistema.</small>
+                                <label for="animal-photos">Foto principal (opcional)</label>
+                                <input id="animal-photos" name="photos" type="file" accept="image/*">
+                                <small class="field-note">A foto será reduzida para carregar mais rápido e aparecerá no cartão do animal.</small>
                             </div>
                             <div class="form-row report-full-width">
                                 <small class="field-note">Quem encontrar o animal poderá iniciar uma conversa privada pelo site. Seu e-mail não será exibido na ocorrência.</small>

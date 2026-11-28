@@ -48,14 +48,14 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 ## Configurar Supabase
 
 1. Crie um projeto no Supabase.
-2. No SQL Editor do projeto, execute `supabase/schema.sql`. O script cria as tabelas, políticas RLS e publicação Realtime necessárias.
+2. No SQL Editor do projeto, execute `supabase/schema.sql`. O script cria as tabelas, políticas RLS, publicação Realtime e bucket público de fotos. Se já executou uma versão anterior, execute novamente para adicionar o armazenamento das fotos.
 3. Copie a URL do projeto e a chave pública `anon`/`publishable` para `js/supabase-config.js`.
 4. Em Authentication → URL Configuration, adicione o endereço local e o domínio publicado à lista de URLs permitidas para redirecionamento.
 5. Teste criando uma conta com e-mail válido. Se a confirmação de e-mail estiver habilitada, confirme a mensagem antes de entrar.
 
 **Nunca use a chave `service_role` no navegador nem a envie ao GitHub.** A chave pública é usada no cliente; a segurança dos dados depende das políticas RLS definidas no schema.
 
-As ocorrências antigas guardadas no `localStorage` não são migradas automaticamente, pois não têm um proprietário autenticado associado. As fotos selecionadas no formulário ainda não são enviadas ou armazenadas.
+As ocorrências antigas guardadas no `localStorage` não são migradas automaticamente, pois não têm um proprietário autenticado associado. Sem Supabase, ocorrências e fotos ficam apenas no navegador atual.
 
 ## Adicionar novos parceiros
 

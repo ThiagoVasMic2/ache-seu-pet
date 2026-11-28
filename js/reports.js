@@ -17,6 +17,7 @@ function initReportForm() {
 
         try {
             const formData = new FormData(form);
+            const photoFile = formData.get('photos');
             const report = {
                 eventType: formData.get('eventType'),
                 name: formData.get('name'),
@@ -31,13 +32,13 @@ function initReportForm() {
                 description: formData.get('description')
             };
 
+            const photo = photoFile?.size ? await prepareReportPhoto(photoFile) : null;
             if (!backend?.isConfigured) {
                 report.id = `local-${Date.now()}`;
+                if (photo) report.photo_data_url = photo.dataUrl;
                 window.achePetStore.helpers.saveReport(report);
-                if (notice) {
-                    notice.textContent = 'Ocorrência salva neste navegador e disponível na busca local. Para que outras pessoas a vejam, configure o Supabase.';
-                }
                 form.reset();
+                window.location.hash = 'animais?publicado=local';
                 return;
             }
 
@@ -47,15 +48,21 @@ function initReportForm() {
                 return;
             }
 
-            const savedReport = await backend.createReport(report);
+            const savedReport = await backend.createReport(report, photo?.blob || null);
             const animal = reportToAnimal(savedReport);
             achePetApp.animals.unshift(animal);
-            if (notice) notice.textContent = 'Ocorrência publicada. Ela já aparece na busca e ficará vinculada à sua conta.';
             form.reset();
             await window.refreshAccountDashboard?.();
+            window.location.hash = 'animais?publicado=online';
         } catch (error) {
             console.error('Could not save animal report:', error);
-            if (notice) notice.textContent = error.message || 'Não foi possível publicar a ocorrência.';
+            if (error.reportCreated) {
+                achePetApp.animals.unshift(reportToAnimal(error.report));
+                form.reset();
+                window.location.hash = 'animais?publicado=foto';
+            } else if (notice) {
+                notice.textContent = error.message || 'Não foi possível publicar a ocorrência.';
+            }
         } finally {
             if (submitButton) {
                 submitButton.disabled = false;
@@ -66,6 +73,33 @@ function initReportForm() {
 
     form.addEventListener('submit', handler);
     form._reportHandler = handler;
+}
+
+async function prepareReportPhoto(file) {
+    if (!file.type.startsWith('image/')) {
+        throw new Error('Selecione um arquivo de imagem válido.');
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        throw new Error('A foto deve ter no máximo 10 MB.');
+    }
+
+    const image = await createImageBitmap(file);
+    const scale = Math.min(1, 1600 / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const context = canvas.getContext('2d');
+    if (!context) {
+        image.close();
+        throw new Error('Não foi possível preparar a foto neste navegador.');
+    }
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    image.close();
+
+    const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    if (!blob) throw new Error('Não foi possível processar a foto selecionada.');
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+    return {blob, dataUrl};
 }
 
 // keep previous behavior when page loads directly

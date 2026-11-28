@@ -206,6 +206,17 @@ async function hydrateAnimalPage() {
     const cardContainer = document.getElementById('animals-results');
     if (!cardContainer) return;
     applyAnimalSearchParams();
+    const publishedStatus = getAnimalSearchParams().get('publicado');
+    const notice = document.getElementById('animal-search-notice');
+    const publicationMessages = {
+        online: 'Ocorrência publicada. Seu animal está na busca.',
+        local: 'Ocorrência salva e exibida nesta busca. Ela só fica disponível neste navegador até configurar o Supabase.',
+        foto: 'Ocorrência publicada e exibida na busca, mas houve um problema ao salvar a foto.'
+    };
+    if (notice && publicationMessages[publishedStatus]) {
+        notice.hidden = false;
+        notice.textContent = publicationMessages[publishedStatus];
+    }
     initAdvancedToggle();
     const form = document.getElementById('animal-search-form');
     if (form?.dataset.filtersInitialized !== 'true') {
