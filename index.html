@@ -12,6 +12,7 @@
     <link rel="icon" href="assets/logo/ache-seu-pet.png" type="image/png">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/responsive.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/css/intlTelInput.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
 </head>
 <body class="auth-check-pending">
@@ -79,8 +80,9 @@
                         </div>
                     </div>
                     <div class="form-row">
-                        <label for="auth-signup-phone">Telefone/WhatsApp (opcional, com DDI)</label>
-                        <input id="auth-signup-phone" name="phone" type="tel" autocomplete="tel" placeholder="+55 11 99999-9999">
+                        <label for="auth-signup-phone">Telefone/WhatsApp (opcional)</label>
+                        <input id="auth-signup-phone" name="phone" type="tel" autocomplete="tel">
+                        <small>Escolha o país e digite os números; a formatação é automática.</small>
                     </div>
                     <div class="form-row">
                         <label for="auth-signup-avatar">Foto do perfil (JPG, PNG ou WebP; até 5 MB)</label>
@@ -95,9 +97,17 @@
                     </div>
                 </form>
                 <form id="auth-login-form" class="search-form account-form" aria-label="Entrar com código" hidden>
-                    <div class="form-row">
-                        <label for="auth-login-identifier">E-mail ou telefone verificado</label>
-                        <input id="auth-login-identifier" name="identifier" type="text" autocomplete="username" required>
+                    <div class="auth-login-method" role="group" aria-label="Método de entrada">
+                        <button id="auth-login-email-mode" class="button button-secondary" type="button" aria-pressed="true">E-mail</button>
+                        <button id="auth-login-phone-mode" class="button button-secondary" type="button" aria-pressed="false">Telefone</button>
+                    </div>
+                    <div id="auth-login-email-row" class="form-row">
+                        <label for="auth-login-email">E-mail cadastrado</label>
+                        <input id="auth-login-email" name="email" type="email" autocomplete="email" required>
+                    </div>
+                    <div id="auth-login-phone-row" class="form-row" hidden>
+                        <label for="auth-login-phone">Telefone verificado</label>
+                        <input id="auth-login-phone" name="phone" type="tel" autocomplete="tel">
                         <small>O código por telefone exige SMS habilitado no Supabase.</small>
                     </div>
                     <div class="form-row form-actions">
@@ -153,15 +163,14 @@
                 </form>
                 <div class="profile-stat-grid" id="profile-stat-grid" aria-live="polite"></div>
                 <form id="profile-contact-form" class="search-form profile-form" aria-label="Informações de contato">
-                <div class="form-row">
-                    <label for="profile-whatsapp">Telefone/WhatsApp (opcional, com DDI)</label>
-                    <input id="profile-whatsapp" name="whatsappPhone" type="tel" autocomplete="tel" placeholder="+55 11 99999-9999">
-                    <small>Para entrar usando telefone e compartilhá-lo na conversa, confirme o número por SMS. O provedor SMS precisa estar configurado no Supabase.</small>
-                </div>
-                <div class="form-row form-actions">
-                    <button id="profile-save-contact" type="submit" class="button button-secondary">Salvar telefone</button>
-                    <button id="profile-verify-phone" type="button" class="button button-secondary">Enviar código para confirmar telefone</button>
-                </div>
+                    <div class="form-row">
+                        <label for="profile-whatsapp">Telefone/WhatsApp (opcional)</label>
+                        <input id="profile-whatsapp" name="whatsappPhone" type="tel" autocomplete="tel">
+                        <small>Escolha o país e digite os números. Para confirmar que o telefone é seu, enviaremos um código SMS.</small>
+                    </div>
+                    <div class="form-row form-actions">
+                        <button id="profile-save-contact" type="submit" class="button button-secondary">Salvar e enviar código SMS</button>
+                    </div>
                 </form>
                 <form id="profile-phone-code-form" class="search-form profile-form" aria-label="Confirmar telefone" hidden>
                     <div class="form-row">
@@ -858,6 +867,7 @@
     </footer>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/intlTelInput.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="js/supabase-config.js"></script>
     <script src="js/backend.js"></script>

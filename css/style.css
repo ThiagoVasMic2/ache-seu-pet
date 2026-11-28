@@ -362,6 +362,10 @@ a.button {
     gap: 0.5rem;
 }
 
+.iti {
+    width: 100%;
+}
+
 .form-row label {
     font-weight: 600;
     color: var(--blue);
@@ -1604,7 +1608,13 @@ body:not(.is-authenticated) .header-actions > :not(#account-nav-link) {
     margin: 1rem 0;
 }
 
-.auth-mode-switch button[aria-pressed="true"] {
+.auth-login-method {
+    display: flex;
+    gap: 0.65rem;
+}
+
+.auth-mode-switch button[aria-pressed="true"],
+.auth-login-method button[aria-pressed="true"] {
     color: var(--white);
     background: var(--green);
     border-color: var(--green);

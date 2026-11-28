@@ -11,11 +11,50 @@ let activeAuthMode = 'signup';
 let currentProfilePreviewUrl = null;
 let profileRequest = 0;
 let signupAvatarPreviewUrl = null;
+const phoneInputInstances = new WeakMap();
 
 function setFormNotice(element, message, isError = false) {
     if (!element) return;
     element.textContent = message;
     element.classList.toggle('is-error', isError);
+}
+
+function initializePhoneInput(input, number = '') {
+    if (!input || typeof window.intlTelInput !== 'function') {
+        return null;
+    }
+
+    let instance = phoneInputInstances.get(input);
+    if (!instance) {
+        instance = window.intlTelInput(input, {
+            initialCountry: 'br',
+            preferredCountries: ['br', 'us', 'pt'],
+            separateDialCode: true,
+            nationalMode: true,
+            formatAsYouType: true,
+            loadUtils: () => import('https://cdn.jsdelivr.net/npm/intl-tel-input@25.12.4/build/js/utils.js')
+        });
+        phoneInputInstances.set(input, instance);
+    }
+    if (number) instance.setNumber(number);
+    return instance;
+}
+
+async function getPhoneInputNumber(input) {
+    if (!input?.value.trim()) return '';
+    const instance = initializePhoneInput(input);
+    if (!instance) {
+        throw new Error('O seletor de país não carregou. Atualize a página e tente novamente.');
+    }
+    try {
+        await instance.promise;
+    } catch (error) {
+        throw new Error('Não foi possível carregar a validação de telefone. Confira sua conexão e tente novamente.');
+    }
+    if (!instance.isValidNumber()) {
+        throw new Error('Confira o país e informe um número de telefone válido.');
+    }
+    return instance.getNumber();
 }
 
 function formatActivityDate(value) {
@@ -102,6 +141,8 @@ async function initAuthPage() {
     const resendButton = document.getElementById('auth-resend');
     const changeEmailButton = document.getElementById('auth-change-email');
     const session = document.getElementById('account-session');
+    const signupPhone = document.getElementById('auth-signup-phone');
+    const loginPhone = document.getElementById('auth-login-phone');
 
     if (!backend?.isConfigured) {
         signupForm.hidden = true;
@@ -136,9 +177,28 @@ async function initAuthPage() {
     renderAccountSession(backend.getCurrentUser());
     if (signupForm.dataset.initialized === 'true') return;
     signupForm.dataset.initialized = 'true';
+    initializePhoneInput(signupPhone);
+    initializePhoneInput(loginPhone);
 
     document.getElementById('auth-show-login')?.addEventListener('click', () => showAuthMode('login'));
     document.getElementById('auth-show-signup')?.addEventListener('click', () => showAuthMode('signup'));
+
+    let loginChannel = 'email';
+    const setLoginChannel = channel => {
+        loginChannel = channel;
+        const isEmail = channel === 'email';
+        const emailRow = document.getElementById('auth-login-email-row');
+        const phoneRow = document.getElementById('auth-login-phone-row');
+        const emailInput = document.getElementById('auth-login-email');
+        if (emailRow) emailRow.hidden = !isEmail;
+        if (phoneRow) phoneRow.hidden = isEmail;
+        if (emailInput) emailInput.required = isEmail;
+        if (loginPhone) loginPhone.required = !isEmail;
+        document.getElementById('auth-login-email-mode')?.setAttribute('aria-pressed', String(isEmail));
+        document.getElementById('auth-login-phone-mode')?.setAttribute('aria-pressed', String(!isEmail));
+    };
+    document.getElementById('auth-login-email-mode')?.addEventListener('click', () => setLoginChannel('email'));
+    document.getElementById('auth-login-phone-mode')?.addEventListener('click', () => setLoginChannel('phone'));
 
     const signupPassword = document.getElementById('auth-signup-password');
     signupPassword?.addEventListener('input', () => updatePasswordStrength(signupPassword.value));
@@ -168,13 +228,14 @@ async function initAuthPage() {
             displayName: String(formData.get('displayName') || '').trim(),
             email: String(formData.get('email') || '').trim().toLowerCase(),
             password: String(formData.get('password') || ''),
-            whatsappPhone: String(formData.get('phone') || '').trim(),
+            whatsappPhone: '',
             avatarFile: signupAvatar?.files?.[0] || null
         };
         if (signupButton) signupButton.disabled = true;
         setFormNotice(notice, 'Criando seu cadastro e enviando o código…');
 
         try {
+            registration.whatsappPhone = await getPhoneInputNumber(signupPhone);
             await backend.createAccount(registration);
             pendingRegistration = {
                 displayName: registration.displayName,
@@ -196,17 +257,19 @@ async function initAuthPage() {
 
     loginForm.addEventListener('submit', async event => {
         event.preventDefault();
-        const identifier = String(new FormData(loginForm).get('identifier') || '').trim();
-        pendingAuthChannel = identifier.includes('@') ? 'email' : 'phone';
-        pendingAuthIdentifier = identifier;
-        pendingAuthPurpose = 'login';
+        pendingAuthIdentifier = '';
         if (loginButton) loginButton.disabled = true;
         setFormNotice(notice, 'Enviando seu código de acesso…');
         try {
-            if (pendingAuthChannel === 'phone') await backend.requestPhoneCode(identifier);
-            else await backend.requestEmailCode(identifier);
+            pendingAuthChannel = loginChannel;
+            pendingAuthIdentifier = loginChannel === 'phone'
+                ? await getPhoneInputNumber(loginPhone)
+                : String(new FormData(loginForm).get('email') || '').trim().toLowerCase();
+            pendingAuthPurpose = 'login';
+            if (pendingAuthChannel === 'phone') await backend.requestPhoneCode(pendingAuthIdentifier);
+            else await backend.requestEmailCode(pendingAuthIdentifier);
             renderAccountSession(null);
-            setFormNotice(notice, `Enviamos um código de 6 dígitos para ${identifier}.`);
+            setFormNotice(notice, `Enviamos um código de 6 dígitos para ${pendingAuthIdentifier}.`);
         } catch (error) {
             pendingAuthIdentifier = '';
             setFormNotice(notice, error.message || 'Não foi possível enviar o código.', true);
@@ -360,6 +423,7 @@ async function initProfilePage() {
         setFormNotice(notice, 'Entre na sua conta para acessar o perfil.', true);
         return;
     }
+    const phoneWidget = initializePhoneInput(phoneInput);
 
     try {
         await backend.ready;
@@ -369,7 +433,7 @@ async function initProfilePage() {
         ]);
         if (!profile) throw new Error('Não foi possível encontrar seu perfil.');
         renderProfile(profile);
-        if (phoneInput) phoneInput.value = whatsappPhone;
+        if (whatsappPhone) phoneWidget?.setNumber(whatsappPhone);
     } catch (error) {
         setFormNotice(notice, error.message || 'Não foi possível carregar seu perfil.', true);
         return;
@@ -429,34 +493,44 @@ async function initProfilePage() {
         event.preventDefault();
         const button = document.getElementById('profile-save-contact');
         if (button) button.disabled = true;
-        setFormNotice(notice, 'Salvando telefone…');
+        setFormNotice(notice, 'Validando e salvando telefone…');
+        let phoneSaved = false;
         try {
+            const whatsappPhone = await getPhoneInputNumber(phoneInput);
             const profile = await backend.updateProfile(
                 document.getElementById('profile-name')?.value || '',
                 null,
-                phoneInput?.value || ''
+                whatsappPhone
             );
+            phoneSaved = true;
             renderProfile(profile);
-            setFormNotice(notice, 'Telefone salvo. Para usar no login, confirme-o por SMS.');
+            if (whatsappPhone) phoneWidget?.setNumber(whatsappPhone);
+            if (!whatsappPhone) {
+                if (phoneCodeForm) phoneCodeForm.hidden = true;
+                setFormNotice(notice, 'Telefone removido do perfil.');
+                return;
+            }
+            if (phoneCodeForm) phoneCodeForm.hidden = false;
+            if (user.phone_confirmed_at && user.phone === whatsappPhone) {
+                if (phoneCodeForm) phoneCodeForm.hidden = true;
+                setFormNotice(notice, 'Telefone salvo e já confirmado.');
+                return;
+            }
+            setFormNotice(notice, 'Telefone salvo. Enviando código SMS…');
+            await backend.requestPhoneVerification(whatsappPhone);
+            setFormNotice(notice, 'Código enviado por SMS. Digite-o abaixo para confirmar que o telefone é seu.');
         } catch (error) {
-            setFormNotice(notice, error.message || 'Não foi possível salvar o telefone.', true);
+            const message = error.message || 'Não foi possível salvar o telefone.';
+            if (phoneSaved && phoneCodeForm) phoneCodeForm.hidden = true;
+            setFormNotice(
+                notice,
+                phoneSaved
+                    ? `Telefone salvo, mas não foi possível enviar o SMS. ${message} Confira se o provedor SMS está configurado no Supabase.`
+                    : message,
+                true
+            );
         } finally {
             if (button) button.disabled = false;
-        }
-    });
-
-    document.getElementById('profile-verify-phone')?.addEventListener('click', async event => {
-        const button = event.currentTarget;
-        button.disabled = true;
-        setFormNotice(notice, 'Solicitando código SMS…');
-        try {
-            await backend.requestPhoneVerification(phoneInput?.value || '');
-            if (phoneCodeForm) phoneCodeForm.hidden = false;
-            setFormNotice(notice, 'Código enviado. Digite-o para confirmar o telefone.');
-        } catch (error) {
-            setFormNotice(notice, error.message || 'Não foi possível enviar o SMS. Confira a configuração do provedor no Supabase.', true);
-        } finally {
-            button.disabled = false;
         }
     });
 
@@ -467,7 +541,8 @@ async function initProfilePage() {
         if (button) button.disabled = true;
         setFormNotice(notice, 'Confirmando telefone…');
         try {
-            await backend.verifyPhoneCode(phoneInput?.value || '', code);
+            const whatsappPhone = await getPhoneInputNumber(phoneInput);
+            await backend.verifyPhoneCode(whatsappPhone, code);
             phoneCodeForm.reset();
             phoneCodeForm.hidden = true;
             setFormNotice(notice, 'Telefone confirmado. Agora você pode usá-lo para receber códigos de acesso.');

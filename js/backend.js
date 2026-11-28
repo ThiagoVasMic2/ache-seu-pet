@@ -419,7 +419,7 @@ async function getMyWhatsappPhone() {
     return data || '';
 }
 
-async function updateProfile(displayName, avatarFile = null, whatsappPhone = '') {
+async function updateProfile(displayName, avatarFile = null, whatsappPhone) {
     const user = await requireUser();
     const normalizedName = String(displayName || '').trim();
     if (normalizedName.length < 2 || normalizedName.length > 40) {
@@ -452,8 +452,11 @@ async function updateProfile(displayName, avatarFile = null, whatsappPhone = '')
         if (error) throw error;
     }
 
-    const normalizedPhone = whatsappPhone ? normalizePhone(whatsappPhone) : '';
-    const changes = {display_name: normalizedName, whatsapp_phone: normalizedPhone || null};
+    const changes = {display_name: normalizedName};
+    if (whatsappPhone !== undefined) {
+        const normalizedPhone = whatsappPhone ? normalizePhone(whatsappPhone) : '';
+        changes.whatsapp_phone = normalizedPhone || null;
+    }
     if (newAvatarPath) changes.avatar_path = newAvatarPath;
     const {data, error} = await supabaseClient.from('profiles')
         .update(changes)

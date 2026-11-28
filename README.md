@@ -62,8 +62,9 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 6. Em Authentication → Providers → Email, configure o tamanho do OTP como 6 e mantenha a confirmação de e-mail ativada.
 7. Em Authentication → Email Templates, use o assunto `Seu código de acesso ao Ache Seu Pet` e copie o conteúdo de `supabase/templates/auth-otp.html` para os modelos Confirm signup e Magic Link. O template usa `{{ .Token }}` para mostrar o código, não um link mágico.
 8. Configure um SMTP próprio e o nome do remetente como `Ache Seu Pet` nas configurações de SMTP do Supabase. Para uma aparência confiável no Gmail, use um domínio verificado com SPF/DKIM; templates personalizados não mudam, sozinhos, o endereço remetente.
-9. Configure um provedor SMS em Authentication → Providers para habilitar códigos por telefone. A pessoa deve confirmar o número no perfil antes de usá-lo para entrar.
-10. Teste criando uma conta com e-mail, senha e código de confirmação; depois use a opção Entrar para solicitar um novo código. A senha é cadastrada, mas o login do site é por código.
+9. Configure um provedor SMS em Authentication → Providers para habilitar códigos por telefone e defina nele o remetente “Ache Seu Pet”, quando disponível. O campo de telefone permite escolher o país, formata e valida o número e salva no padrão internacional E.164; essa validação verifica apenas o formato. A confirmação de posse ocorre quando a pessoa informa o código recebido por SMS.
+10. Em Authentication → SMS Templates, configure a mensagem, por exemplo: `Ache Seu Pet: seu código de verificação é {{ .Code }}. Não compartilhe este código.`
+11. Teste criando uma conta com e-mail, senha e código de confirmação; depois use a opção Entrar para solicitar um novo código. A senha é cadastrada, mas o login do site é por código. Teste também a confirmação por telefone após configurar o provedor SMS.
 
 **Nunca use a chave `service_role` no navegador nem a envie ao GitHub.** A chave pública é usada no cliente; a segurança dos dados depende das políticas RLS definidas no schema.
 
