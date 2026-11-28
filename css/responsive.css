@@ -169,6 +169,11 @@
         justify-content: center;
     }
 
+    .animal-card-actions .edit-report-button {
+        justify-self: center;
+        width: 2.75rem;
+    }
+
     .dashboard-summary,
     .dashboard-report,
     .dashboard-conversation {

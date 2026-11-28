@@ -165,6 +165,69 @@ async function createReport(fields, photoFile = null) {
     return addReportPhotoUrl(updatedReport);
 }
 
+async function updateReport(reportId, fields, photoFile = null) {
+    const user = await requireUser();
+    const existingReport = await getReport(reportId);
+    if (!existingReport || existingReport.owner_id !== user.id) {
+        throw new Error('Esta ocorrência não existe ou não pertence à sua conta.');
+    }
+
+    const updates = {
+        event_type: fields.eventType,
+        name: fields.name || '',
+        species: fields.species,
+        breed: fields.breed || '',
+        sex: fields.sex || '',
+        color: fields.color || '',
+        characteristics: fields.characteristics || '',
+        event_date: fields.date,
+        city: fields.city,
+        region: fields.region || '',
+        description: fields.description
+    };
+    let newPhotoPath = null;
+    const storage = supabaseClient.storage.from('report-photos');
+    if (photoFile) {
+        newPhotoPath = `${user.id}/${reportId}-${Date.now()}.jpg`;
+        const {error: uploadError} = await storage.upload(newPhotoPath, photoFile, {
+            contentType: 'image/jpeg',
+            upsert: false
+        });
+        if (uploadError) throw uploadError;
+        updates.photo_path = newPhotoPath;
+    }
+
+    const {data, error} = await supabaseClient
+        .from('reports')
+        .update(updates)
+        .eq('id', reportId)
+        .eq('owner_id', user.id)
+        .select('*')
+        .maybeSingle();
+    if (error || !data) {
+        if (newPhotoPath) {
+            try {
+                const {error: cleanupError} = await storage.remove([newPhotoPath]);
+                if (cleanupError) console.error('Could not clean up an unlinked replacement photo:', cleanupError);
+            } catch (cleanupError) {
+                console.error('Could not clean up an unlinked replacement photo:', cleanupError);
+            }
+        }
+        if (error) throw error;
+        throw new Error('Esta ocorrência não foi alterada. Verifique se ela ainda pertence à sua conta.');
+    }
+
+    if (newPhotoPath && existingReport.photo_path) {
+        try {
+            const {error: removeError} = await storage.remove([existingReport.photo_path]);
+            if (removeError) console.error('Could not remove the replaced report photo:', removeError);
+        } catch (removeError) {
+            console.error('Could not remove the replaced report photo:', removeError);
+        }
+    }
+    return addReportPhotoUrl(data);
+}
+
 async function listOwnReports() {
     const user = await requireUser();
     const {data, error} = await supabaseClient
@@ -187,6 +250,35 @@ async function deleteReport(reportId) {
         .maybeSingle();
     if (error) throw error;
     if (!data) throw new Error('A ocorrência não existe ou não pertence à sua conta.');
+}
+
+async function submitAbuseReport(reportId, reason, details) {
+    const user = await requireUser();
+    const allowedReasons = [
+        'solicitacao_dinheiro',
+        'suspeita_golpe',
+        'informacao_falsa',
+        'abuso_assedio',
+        'suspeita_hack',
+        'outro'
+    ];
+    const trimmedDetails = String(details || '').trim();
+    if (!allowedReasons.includes(reason)) {
+        throw new Error('Selecione um motivo válido para a denúncia.');
+    }
+    if (trimmedDetails.length > 2000) {
+        throw new Error('Os detalhes da denúncia devem ter no máximo 2000 caracteres.');
+    }
+
+    const {error} = await supabaseClient
+        .from('abuse_reports')
+        .insert({
+            report_id: reportId,
+            reporter_id: user.id,
+            reason,
+            details: trimmedDetails
+        });
+    if (error) throw error;
 }
 
 async function listConversations() {
@@ -333,8 +425,10 @@ window.achePetBackend = {
     listReports,
     getReport,
     createReport,
+    updateReport,
     listOwnReports,
     deleteReport,
+    submitAbuseReport,
     listConversations,
     openConversation,
     getConversation,

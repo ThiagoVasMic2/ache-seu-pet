@@ -80,7 +80,7 @@ async function initForPath(absoluteUrl) {
     if (path.endsWith('/pages/animais.html') || path.endsWith('/animais.html')) {
         if (typeof hydrateAnimalPage === 'function') hydrateAnimalPage();
     } else if (path.endsWith('/pages/cadastrar-animal.html') || path.endsWith('/cadastrar-animal.html')) {
-        if (typeof initReportForm === 'function') initReportForm();
+        if (typeof initReportForm === 'function') await initReportForm(url.searchParams);
     } else if (path.endsWith('/pages/mapa.html') || path.endsWith('/mapa.html')) {
         if (typeof initMap === 'function') await initMap();
     } else if (path.endsWith('/pages/adocao.html') || path.endsWith('/adocao.html')) {

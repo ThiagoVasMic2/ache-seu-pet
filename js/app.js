@@ -194,6 +194,25 @@ function deleteLocalReport(reportId) {
     return true;
 }
 
+function getLocalReport(reportId) {
+    return loadReports().find(report => String(report.id) === String(reportId)) || null;
+}
+
+function updateLocalReport(reportId, changes) {
+    const reports = loadReports();
+    const index = reports.findIndex(report => String(report.id) === String(reportId));
+    if (index < 0) return null;
+    reports[index] = {
+        ...reports[index],
+        ...changes,
+        id: reports[index].id,
+        source: 'localStorage'
+    };
+    localStorage.setItem(achePetApp.localKey, JSON.stringify(reports));
+    achePetApp.animals = reports.map(report => reportToAnimal({...report, source: 'localStorage'}));
+    return reports[index];
+}
+
 achePetApp.animals = loadReports().map(report => reportToAnimal({...report, source: 'localStorage'}));
 
 async function loadPublicAnimals() {
@@ -233,6 +252,8 @@ window.achePetStore = {
         setStatusClass,
         saveReport,
         loadReports,
+        getLocalReport,
+        updateLocalReport,
         deleteLocalReport,
         loadPublicAnimals,
         reportToAnimal,

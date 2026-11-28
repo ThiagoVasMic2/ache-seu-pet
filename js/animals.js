@@ -3,9 +3,10 @@ function createAnimalCard(animal, useDetailsLink = true, compact = false) {
     const backend = window.achePetBackend;
     const user = backend?.getCurrentUser();
     const isOwner = Boolean(user?.id && animal.ownerId === user.id);
-    const canDelete = animal.isLocalReport || isOwner;
+    const canManage = animal.isLocalReport || isOwner;
     const canContactOwner = compact && backend?.isConfigured && animal.status === 'Perdido'
         && animal.ownerId && !isOwner;
+    const canReportAbuse = compact && backend?.isConfigured && animal.ownerId && !isOwner;
     return `
         <article class="animal-card${compact ? ' animal-card--compact' : ''}">
             <img src="${imagePath}" alt="Foto de ${escapeHTML(animal.name)}" loading="lazy">
@@ -17,11 +18,15 @@ function createAnimalCard(animal, useDetailsLink = true, compact = false) {
                 <p>${escapeHTML(animal.species)} • ${escapeHTML(animal.city)} - ${escapeHTML(animal.region || 'Região não informada')}</p>
                 <div class="animal-badges">${renderAnimalBadges(animal)}</div>
                 <p><small>Última atualização: ${escapeHTML(animal.date)}</small></p>
-                ${useDetailsLink || canContactOwner || canDelete ? `
+                ${useDetailsLink || canContactOwner || canManage || canReportAbuse ? `
                     <div class="animal-card-actions">
                         ${useDetailsLink ? `<a class="button button-secondary" href="#animal?id=${encodeURIComponent(animal.id)}">Detalhes</a>` : ''}
                         ${canContactOwner ? `<a class="button button-primary contact-owner-button" href="#conversas?reportId=${encodeURIComponent(animal.id)}">Enviar mensagem ao tutor</a>` : ''}
-                        ${canDelete ? `<button class="button button-danger" type="button" data-delete-report="${encodeURIComponent(animal.id)}" data-delete-local="${animal.isLocalReport ? 'true' : 'false'}">Excluir ocorrência</button>` : ''}
+                        ${canManage ? `
+                            <a class="button button-secondary edit-report-button" href="#cadastrar-animal?editar=${encodeURIComponent(animal.id)}" aria-label="Editar ocorrência de ${escapeHTML(animal.name)}" title="Editar ocorrência">⚙</a>
+                            <button class="button button-danger" type="button" data-delete-report="${encodeURIComponent(animal.id)}" data-delete-local="${animal.isLocalReport ? 'true' : 'false'}">Excluir ocorrência</button>
+                        ` : ''}
+                        ${canReportAbuse ? `<button class="button button-secondary report-abuse-button" type="button" data-report-abuse="${encodeURIComponent(animal.id)}">Denunciar abuso</button>` : ''}
                     </div>
                 ` : ''}
             </div>
@@ -211,7 +216,9 @@ async function hydrateAnimalPage() {
     const publicationMessages = {
         online: 'Ocorrência publicada. Seu animal está na busca.',
         local: 'Ocorrência salva e exibida nesta busca. Ela só fica disponível neste navegador até configurar o Supabase.',
-        foto: 'Ocorrência publicada e exibida na busca, mas houve um problema ao salvar a foto.'
+        foto: 'Ocorrência publicada e exibida na busca, mas houve um problema ao salvar a foto.',
+        atualizado: 'Ocorrência atualizada.',
+        'local-edit': 'Ocorrência atualizada neste navegador.'
     };
     if (notice && publicationMessages[publishedStatus]) {
         notice.hidden = false;

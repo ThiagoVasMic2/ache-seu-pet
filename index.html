@@ -226,7 +226,7 @@
             <div class="container">
                 <div class="section-heading report-heading">
                     <span class="eyebrow">Registre uma ocorrência</span>
-                    <h2>Conte o que aconteceu</h2>
+                    <h2 id="report-form-heading">Conte o que aconteceu</h2>
                 </div>
                 <p class="report-intro">Preencha as informações que souber. Os campos com * são obrigatórios. Mostraremos apenas uma localização aproximada.</p>
                 <p id="report-notice" class="form-notice" role="status" aria-live="polite"></p>
@@ -307,7 +307,7 @@
                                 <div class="photo-upload-layout">
                                     <div class="photo-upload-control">
                                         <input id="animal-photos" name="photos" type="file" accept="image/*">
-                                        <small class="field-note">A foto será reduzida para carregar mais rápido e aparecerá no cartão do animal.</small>
+                                        <small id="animal-photo-note" class="field-note">A foto será reduzida para carregar mais rápido e aparecerá no cartão do animal.</small>
                                     </div>
                                     <figure id="animal-photo-preview" class="photo-preview" hidden>
                                         <img id="animal-photo-preview-image" alt="Prévia da foto selecionada">
@@ -694,6 +694,40 @@
         </section>
     </main>
 
+    <dialog id="abuse-report-dialog" class="report-dialog" aria-labelledby="abuse-report-title">
+        <form id="abuse-report-form">
+            <div class="report-dialog-header">
+                <div>
+                    <span class="eyebrow">Segurança da comunidade</span>
+                    <h2 id="abuse-report-title">Denunciar ocorrência</h2>
+                </div>
+                <button class="report-dialog-close" type="button" data-close-abuse-dialog aria-label="Fechar denúncia">×</button>
+            </div>
+            <p class="safety-callout">O Ache Seu Pet não intermedeia recompensas nem pagamentos. Não transfira dinheiro para recuperar um animal.</p>
+            <div class="form-row">
+                <label for="abuse-report-reason">O que aconteceu?</label>
+                <select id="abuse-report-reason" name="reason" required>
+                    <option value="">Selecione um motivo</option>
+                    <option value="solicitacao_dinheiro">Pedido de dinheiro ou recompensa</option>
+                    <option value="suspeita_golpe">Suspeita de golpe ou fraude</option>
+                    <option value="informacao_falsa">Informação falsa ou ocorrência suspeita</option>
+                    <option value="abuso_assedio">Abuso, ameaça ou assédio</option>
+                    <option value="suspeita_hack">Suspeita de conta invadida</option>
+                    <option value="outro">Outro problema</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <label for="abuse-report-details">Detalhes (opcional)</label>
+                <textarea id="abuse-report-details" name="details" rows="4" maxlength="2000" placeholder="Descreva o que aconteceu, sem incluir senhas ou dados financeiros."></textarea>
+            </div>
+            <p id="abuse-report-notice" class="form-notice" role="status" aria-live="polite"></p>
+            <div class="form-actions">
+                <button class="button button-secondary" type="button" data-close-abuse-dialog>Cancelar</button>
+                <button class="button button-primary" type="submit">Enviar denúncia</button>
+            </div>
+        </form>
+    </dialog>
+
     <footer class="site-footer">
         <div class="container footer-grid">
             <div>
@@ -728,6 +762,7 @@
     <script src="js/map.js"></script>
     <script src="js/reports.js"></script>
     <script src="js/account.js"></script>
+    <script src="js/moderation.js"></script>
     <script src="js/modal.js"></script>
     <script src="js/router.js"></script>
 </body>

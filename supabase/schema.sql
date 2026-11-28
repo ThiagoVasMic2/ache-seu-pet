@@ -56,15 +56,33 @@ create table if not exists public.messages (
     created_at timestamptz not null default now()
 );
 
+create table if not exists public.abuse_reports (
+    id uuid primary key default gen_random_uuid(),
+    report_id uuid not null,
+    reporter_id uuid not null references auth.users(id) on delete cascade,
+    reason text not null check (reason in (
+        'solicitacao_dinheiro',
+        'suspeita_golpe',
+        'informacao_falsa',
+        'abuso_assedio',
+        'suspeita_hack',
+        'outro'
+    )),
+    details text not null default '' check (length(details) <= 2000),
+    created_at timestamptz not null default now()
+);
+
 create index if not exists reports_created_at_idx on public.reports (created_at desc);
 create index if not exists reports_owner_created_at_idx on public.reports (owner_id, created_at desc);
 create index if not exists conversations_owner_updated_at_idx on public.conversations (owner_id, updated_at desc);
 create index if not exists conversations_visitor_updated_at_idx on public.conversations (visitor_id, updated_at desc);
 create index if not exists messages_conversation_created_at_idx on public.messages (conversation_id, created_at);
+create index if not exists abuse_reports_created_at_idx on public.abuse_reports (created_at desc);
 
 alter table public.reports enable row level security;
 alter table public.conversations enable row level security;
 alter table public.messages enable row level security;
+alter table public.abuse_reports enable row level security;
 
 insert into storage.buckets (id, name, public)
 values ('report-photos', 'report-photos', true)
@@ -75,6 +93,8 @@ grant select on public.reports to anon, authenticated;
 grant insert, update, delete on public.reports to authenticated;
 grant select, insert on public.conversations to authenticated;
 grant select, insert on public.messages to authenticated;
+revoke all on public.abuse_reports from anon, authenticated;
+grant insert on public.abuse_reports to authenticated;
 
 drop policy if exists "Anyone can read reports" on public.reports;
 create policy "Anyone can read reports"
@@ -96,6 +116,19 @@ drop policy if exists "Owners can delete their reports" on public.reports;
 create policy "Owners can delete their reports"
     on public.reports for delete
     using (owner_id = (select auth.uid()));
+
+drop policy if exists "Authenticated users can report other reports" on public.abuse_reports;
+create policy "Authenticated users can report other reports"
+    on public.abuse_reports for insert to authenticated
+    with check (
+        reporter_id = (select auth.uid())
+        and exists (
+            select 1
+            from public.reports
+            where reports.id = abuse_reports.report_id
+              and reports.owner_id <> (select auth.uid())
+        )
+    );
 
 drop policy if exists "Anyone can view report photos" on storage.objects;
 create policy "Anyone can view report photos"
