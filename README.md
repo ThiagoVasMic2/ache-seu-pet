@@ -48,7 +48,7 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 - Remoção de postagens próprias
 - Chat privado em tempo real com avatar e nome, imagens e contatos visíveis apenas aos participantes
 - Denúncias privadas de golpes, pedidos de dinheiro, abuso e suspeita de conta invadida
-- Página de mapa com marcadores e filtros de status
+- Página de mapa com marcadores e filtros de status; os pontos representam o centro aproximado da cidade e usam geocodificação Open-Meteo/GeoNames com cache local
 - Design acessível com HTML semântico e foco visível
 - O acesso às páginas do site exige uma sessão autenticada no Supabase
 
