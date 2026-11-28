@@ -5,6 +5,11 @@ async function loadPage(url, addToHistory = true) {
         const absolute = new URL(url, location.href).href;
         const urlObj = new URL(absolute);
         const path = urlObj.pathname;
+        if (!path.endsWith('/conta.html') && !await hasAuthenticatedSiteAccess()) {
+            sessionStorage.setItem('achepetPendingRoute', location.hash || '#inicio');
+            window.location.hash = '#conta';
+            return;
+        }
 
         // Prefer in-document templates (SPA) if available
         const routes = [
@@ -67,6 +72,25 @@ async function loadPage(url, addToHistory = true) {
     }
 }
 
+async function hasAuthenticatedSiteAccess() {
+    const backend = window.achePetBackend;
+    if (!backend?.isConfigured) {
+        document.body.classList.remove('is-authenticated');
+        return false;
+    }
+    try {
+        await backend.ready;
+        const user = backend.getCurrentUser();
+        document.body.classList.toggle('is-authenticated', Boolean(user));
+        if (user) document.body.classList.remove('auth-check-pending');
+        return Boolean(user);
+    } catch (error) {
+        document.body.classList.remove('is-authenticated');
+        console.error('Could not verify the current user:', error);
+        return false;
+    }
+}
+
 function isLocalLink(anchor) {
     if (!anchor || !anchor.href) return false;
     const url = new URL(anchor.href, location.href);
@@ -89,6 +113,8 @@ async function initForPath(absoluteUrl) {
         if (typeof renderPartnersList === 'function') renderPartnersList();
     } else if (path.endsWith('/conta.html')) {
         await initAuthPage();
+    } else if (path.endsWith('/perfil.html')) {
+        await initProfilePage();
     } else if (path.endsWith('/conversas.html')) {
         await initChatPage(url.searchParams);
     } else if (path.endsWith('/pages/animal.html') || path.endsWith('/animal.html')) {
@@ -194,14 +220,36 @@ document.addEventListener('DOMContentLoaded', () => {
     if (location.hash) {
         handleHashRoute(location.hash, false);
     } else {
-        initForPath(location.href);
+        handleInitialRoute();
     }
 });
 
+async function handleInitialRoute() {
+    if (!await hasAuthenticatedSiteAccess()) {
+        sessionStorage.setItem('achepetPendingRoute', '#inicio');
+        window.location.hash = '#conta';
+        return;
+    }
+    await initForPath(location.href);
+}
+
 // helper to load from hash tokens
-function handleHashRoute(hash, addToHistory = true) {
+async function handleHashRoute(hash, addToHistory = true) {
     const raw = hash.startsWith('#') ? hash.slice(1) : hash;
     const [name, query] = raw.split('?');
+    if (name === 'conta') {
+        await hasAuthenticatedSiteAccess();
+        document.body.classList.remove('auth-check-pending');
+    }
+    if (name !== 'conta' && !await hasAuthenticatedSiteAccess()) {
+        sessionStorage.setItem('achepetPendingRoute', `#${raw}`);
+        if (location.hash !== '#conta') window.location.hash = '#conta';
+        return;
+    }
+    if (name === 'inicio') {
+        await loadPage('/', false);
+        return;
+    }
     const map = {
         'animais': 'tmpl-animais',
         'cadastrar-animal': 'tmpl-cadastrar',
@@ -213,6 +261,7 @@ function handleHashRoute(hash, addToHistory = true) {
         'adocao': 'tmpl-adocao',
         'contato': 'tmpl-contato',
         'conta': 'tmpl-conta',
+        'perfil': 'tmpl-perfil',
         'conversas': 'tmpl-conversas'
     };
 
@@ -231,7 +280,7 @@ function handleHashRoute(hash, addToHistory = true) {
 
     // call initForPath with a synthetic path so existing init logic runs
     const synthetic = new URL(name + '.html' + (query ? '?' + query : ''), location.href).href;
-    initForPath(synthetic);
+    await initForPath(synthetic);
     if (typeof animateSections === 'function') animateSections();
     initMobileMenu();
     if (typeof closeMobileMenu === 'function') closeMobileMenu();

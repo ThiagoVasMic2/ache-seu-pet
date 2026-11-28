@@ -38,6 +38,10 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 - Página inicial com hero, busca rápida, categorias, adição de cards e parceiros
 - Busca de animais com filtros por tipo, situação, cidade e raio
 - Cadastro de ocorrências associado à conta autenticada
+- Acesso obrigatório por código numérico de 6 dígitos enviado por e-mail, sem senha
+- Perfil com nome, avatar privado e estatísticas de participação
+- Encerramento de ocorrência de animal perdido como reencontrado e avaliações entre participantes
+- Cadastro e divulgação de animais para adoção
 - Edição de ocorrências pelo próprio autor
 - Área compacta no topo para acompanhar postagens próprias e conversas recentes
 - Remoção de postagens próprias
@@ -45,21 +49,25 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 - Denúncias privadas de golpes, pedidos de dinheiro, abuso e suspeita de conta invadida
 - Página de mapa com marcadores e filtros de status
 - Design acessível com HTML semântico e foco visível
-- Sem Supabase configurado, ocorrências são salvas apenas no navegador atual e não ficam públicas
+- O acesso às páginas do site exige uma sessão autenticada no Supabase
 
 ## Configurar Supabase
 
 1. Crie um projeto no Supabase.
-2. No SQL Editor do projeto, execute `supabase/schema.sql`. O script cria as tabelas, políticas RLS, publicação Realtime, bucket público de fotos e a fila privada de denúncias. Se já executou uma versão anterior, execute novamente para aplicar as atualizações.
+2. No SQL Editor do projeto, execute `supabase/schema.sql`. O script cria/atualiza as tabelas, políticas RLS, publicação Realtime, bucket público de fotos, bucket privado de avatares e a fila privada de denúncias. Se já executou uma versão anterior, execute novamente para aplicar as atualizações.
 3. Copie a URL do projeto e a chave pública `anon`/`publishable` para `js/supabase-config.js`.
-4. Em Authentication → URL Configuration, adicione o endereço local e o domínio publicado à lista de URLs permitidas para redirecionamento.
-5. Teste criando uma conta com e-mail válido. Se a confirmação de e-mail estiver habilitada, confirme a mensagem antes de entrar.
+4. Em Authentication → URL Configuration, configure os endereços permitidos do site.
+5. Em Authentication → Providers → Email, configure o tamanho do OTP como 6. Em Email Templates, inclua `{{ .Token }}` nos modelos Magic Link e Confirm signup; o fluxo do site verifica o código, não um link mágico.
+6. Configure um provedor SMTP confiável e os limites de envio de e-mail no Supabase antes de publicar para usuários reais.
+7. Teste criando uma conta com um e-mail válido. O mesmo formulário entra em contas existentes ou cria uma conta nova após validar o código.
 
 **Nunca use a chave `service_role` no navegador nem a envie ao GitHub.** A chave pública é usada no cliente; a segurança dos dados depende das políticas RLS definidas no schema.
 
-As ocorrências antigas guardadas no `localStorage` não são migradas automaticamente, pois não têm um proprietário autenticado associado. Sem Supabase, ocorrências e fotos ficam apenas no navegador atual.
+As ocorrências antigas guardadas no `localStorage` não são migradas automaticamente, pois não têm um proprietário autenticado associado. O Supabase precisa estar configurado para entrar no site e usar suas funcionalidades.
 
 Denúncias exigem uma conta autenticada e ficam privadas na tabela `abuse_reports`; a revisão é feita pelo responsável do projeto no painel do Supabase. O site não oferece recompensas nem processa pagamentos.
+
+Os avatares ficam em um bucket privado e são exibidos por URLs temporárias apenas para usuários autenticados. Avaliações de 1 a 5 estrelas só podem ser enviadas uma vez por participante em cada conversa, depois de o tutor marcar a ocorrência como reencontrada; o banco valida essa condição por RLS.
 
 ## Adicionar novos parceiros
 

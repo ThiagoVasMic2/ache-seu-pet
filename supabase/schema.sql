@@ -9,7 +9,8 @@ create table if not exists public.reports (
         'Encontrei um animal abandonado',
         'Vi um animal perdido',
         'Animal silvestre encontrado',
-        'Preciso de ajuda para resgate'
+        'Preciso de ajuda para resgate',
+        'Animal para adoção'
     )),
     name text not null default '' check (length(name) <= 100),
     species text not null check (length(trim(species)) between 1 and 80),
@@ -30,12 +31,43 @@ create table if not exists public.reports (
             when 'Encontrei um animal abandonado' then 'Abandonado'
             when 'Animal silvestre encontrado' then 'Silvestre avistado'
             when 'Preciso de ajuda para resgate' then 'Resgate solicitado'
+            when 'Animal para adoção' then 'Em Adoção'
         end
     ) stored,
     created_at timestamptz not null default now()
 );
 
 alter table public.reports add column if not exists photo_path text;
+alter table public.reports add column if not exists reunited_at timestamptz;
+
+alter table public.reports drop constraint if exists reports_event_type_check;
+alter table public.reports add constraint reports_event_type_check check (event_type in (
+    'Meu animal está perdido',
+    'Encontrei um animal',
+    'Encontrei um animal abandonado',
+    'Vi um animal perdido',
+    'Animal silvestre encontrado',
+    'Preciso de ajuda para resgate',
+    'Animal para adoção'
+));
+
+create table if not exists public.profiles (
+    id uuid primary key references auth.users(id) on delete cascade,
+    display_name text not null default '' check (length(display_name) <= 40),
+    avatar_path text,
+    created_at timestamptz not null default now()
+);
+
+insert into public.profiles (id, display_name, created_at)
+select id,
+       left(coalesce(
+           nullif(raw_user_meta_data->>'display_name', ''),
+           nullif(split_part(coalesce(email, ''), '@', 1), ''),
+           'Usuário'
+       ), 40),
+       created_at
+from auth.users
+on conflict (id) do nothing;
 
 create table if not exists public.conversations (
     id uuid primary key default gen_random_uuid(),
@@ -72,34 +104,96 @@ create table if not exists public.abuse_reports (
     created_at timestamptz not null default now()
 );
 
+create table if not exists public.profile_ratings (
+    id uuid primary key default gen_random_uuid(),
+    conversation_id uuid not null,
+    rater_id uuid not null references auth.users(id) on delete cascade,
+    rated_user_id uuid not null references auth.users(id) on delete cascade,
+    stars smallint not null check (stars between 1 and 5),
+    created_at timestamptz not null default now(),
+    unique (conversation_id, rater_id),
+    check (rater_id <> rated_user_id)
+);
+
 create index if not exists reports_created_at_idx on public.reports (created_at desc);
 create index if not exists reports_owner_created_at_idx on public.reports (owner_id, created_at desc);
 create index if not exists conversations_owner_updated_at_idx on public.conversations (owner_id, updated_at desc);
 create index if not exists conversations_visitor_updated_at_idx on public.conversations (visitor_id, updated_at desc);
 create index if not exists messages_conversation_created_at_idx on public.messages (conversation_id, created_at);
 create index if not exists abuse_reports_created_at_idx on public.abuse_reports (created_at desc);
+create index if not exists profile_ratings_rated_user_idx on public.profile_ratings (rated_user_id);
 
 alter table public.reports enable row level security;
 alter table public.conversations enable row level security;
 alter table public.messages enable row level security;
 alter table public.abuse_reports enable row level security;
+alter table public.profiles enable row level security;
+alter table public.profile_ratings enable row level security;
 
 insert into storage.buckets (id, name, public)
 values ('report-photos', 'report-photos', true)
 on conflict (id) do update set public = excluded.public;
 
+insert into storage.buckets (id, name, public)
+values ('profile-avatars', 'profile-avatars', false)
+on conflict (id) do update set public = excluded.public;
+
 grant usage on schema public to anon, authenticated;
-grant select on public.reports to anon, authenticated;
+revoke all on public.reports from anon;
+grant select on public.reports to authenticated;
 grant insert, update, delete on public.reports to authenticated;
 grant select, insert on public.conversations to authenticated;
 grant select, insert on public.messages to authenticated;
 revoke all on public.abuse_reports from anon, authenticated;
 grant insert on public.abuse_reports to authenticated;
+grant select on public.profiles to authenticated;
+grant update (display_name, avatar_path) on public.profiles to authenticated;
+grant select on public.profile_ratings to authenticated;
+grant insert (conversation_id, rater_id, rated_user_id, stars) on public.profile_ratings to authenticated;
 
 drop policy if exists "Anyone can read reports" on public.reports;
-create policy "Anyone can read reports"
-    on public.reports for select
+drop policy if exists "Authenticated users can read reports" on public.reports;
+create policy "Authenticated users can read reports"
+    on public.reports for select to authenticated
     using (true);
+
+drop policy if exists "Authenticated users can read profiles" on public.profiles;
+create policy "Authenticated users can read profiles"
+    on public.profiles for select to authenticated
+    using (true);
+
+drop policy if exists "Users can update their own profile" on public.profiles;
+create policy "Users can update their own profile"
+    on public.profiles for update to authenticated
+    using (id = (select auth.uid()))
+    with check (id = (select auth.uid()));
+
+drop policy if exists "Authenticated users can read ratings" on public.profile_ratings;
+create policy "Authenticated users can read ratings"
+    on public.profile_ratings for select to authenticated
+    using (true);
+
+drop policy if exists "Participants can rate after reunion" on public.profile_ratings;
+create policy "Participants can rate after reunion"
+    on public.profile_ratings for insert to authenticated
+    with check (
+        rater_id = (select auth.uid())
+        and exists (
+            select 1
+            from public.conversations
+            join public.reports on reports.id = conversations.report_id
+            where conversations.id = profile_ratings.conversation_id
+              and reports.reunited_at is not null
+              and reports.event_type = 'Meu animal está perdido'
+              and (
+                  (conversations.owner_id = profile_ratings.rater_id
+                   and conversations.visitor_id = profile_ratings.rated_user_id)
+                  or
+                  (conversations.visitor_id = profile_ratings.rater_id
+                   and conversations.owner_id = profile_ratings.rated_user_id)
+              )
+        )
+    );
 
 drop policy if exists "Users can create their own reports" on public.reports;
 create policy "Users can create their own reports"
@@ -151,6 +245,27 @@ create policy "Users can delete their own report photos"
         and (storage.foldername(name))[1] = (select auth.uid())::text
     );
 
+drop policy if exists "Authenticated users can read profile avatars" on storage.objects;
+create policy "Authenticated users can read profile avatars"
+    on storage.objects for select to authenticated
+    using (bucket_id = 'profile-avatars');
+
+drop policy if exists "Users can upload their own profile avatars" on storage.objects;
+create policy "Users can upload their own profile avatars"
+    on storage.objects for insert to authenticated
+    with check (
+        bucket_id = 'profile-avatars'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+    );
+
+drop policy if exists "Users can delete their own profile avatars" on storage.objects;
+create policy "Users can delete their own profile avatars"
+    on storage.objects for delete to authenticated
+    using (
+        bucket_id = 'profile-avatars'
+        and (storage.foldername(name))[1] = (select auth.uid())::text
+    );
+
 drop policy if exists "Participants can read conversations" on public.conversations;
 create policy "Participants can read conversations"
     on public.conversations for select
@@ -171,6 +286,7 @@ create policy "Visitors can start conversations about lost pets"
             where reports.id = conversations.report_id
               and reports.owner_id = conversations.owner_id
               and reports.status = 'Perdido'
+              and reports.reunited_at is null
         )
     );
 
@@ -223,6 +339,32 @@ drop trigger if exists messages_touch_conversation on public.messages;
 create trigger messages_touch_conversation
     after insert on public.messages
     for each row execute function public.touch_conversation_on_message();
+
+create or replace function public.create_profile_for_new_user()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+begin
+    insert into public.profiles (id, display_name)
+    values (
+        new.id,
+        left(coalesce(
+            nullif(new.raw_user_meta_data->>'display_name', ''),
+            nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
+            'Usuário'
+        ), 40)
+    )
+    on conflict (id) do nothing;
+    return new;
+end;
+$$;
+
+drop trigger if exists auth_user_created_profile on auth.users;
+create trigger auth_user_created_profile
+    after insert on auth.users
+    for each row execute function public.create_profile_for_new_user();
 
 do $$
 begin

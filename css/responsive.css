@@ -199,6 +199,23 @@
     .chat-form {
         grid-template-columns: minmax(0, 1fr);
     }
+
+    .rating-form {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .rating-form label,
+    .rating-form .form-notice {
+        grid-column: auto;
+    }
+
+    .rating-form .button {
+        width: 100%;
+    }
+
+    .profile-nav-link {
+        justify-content: center;
+    }
 }
 
 @media (max-width: 450px) {

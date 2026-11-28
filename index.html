@@ -14,7 +14,7 @@
     <link rel="stylesheet" href="css/responsive.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="anonymous">
 </head>
-<body>
+<body class="auth-check-pending">
     <a class="skip-link" href="#main-content">Ir para o conteúdo</a>
     <header class="site-header">
         <div class="container header-content">
@@ -40,6 +40,10 @@
             </nav>
             <div class="header-actions">
                 <a href="#conta" id="account-nav-link" class="button button-secondary">Entrar</a>
+                <a href="#perfil" id="profile-nav-link" class="profile-nav-link" hidden>
+                    <img id="profile-nav-avatar" alt="" hidden>
+                    <span id="profile-nav-name">Meu perfil</span>
+                </a>
                 <a href="#cadastrar-animal" class="button button-primary">Registrar ocorrência</a>
             </div>
         </div>
@@ -50,7 +54,7 @@
             <div class="container account-panel">
                 <div class="section-heading">
                     <span class="eyebrow">Sua conta</span>
-                    <h2>Entre para acompanhar suas ocorrências</h2>
+                    <h2>Entre ou crie sua conta com e-mail</h2>
                 </div>
                 <p id="auth-notice" class="form-notice" role="status" aria-live="polite"></p>
                 <form id="auth-form" class="search-form account-form" aria-label="Entrar ou criar uma conta">
@@ -58,20 +62,59 @@
                         <label for="auth-email">E-mail</label>
                         <input id="auth-email" name="email" type="email" autocomplete="email" required>
                     </div>
+                    <div class="form-row form-actions">
+                        <button id="auth-submit" type="submit" class="button button-primary">Enviar código de acesso</button>
+                    </div>
+                </form>
+                <form id="auth-code-form" class="search-form account-form" aria-label="Confirmar código de acesso" hidden>
                     <div class="form-row">
-                        <label for="auth-password">Senha</label>
-                        <input id="auth-password" name="password" type="password" autocomplete="current-password" minlength="8" required>
+                        <label for="auth-code">Código de 6 dígitos</label>
+                        <input id="auth-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
                     </div>
                     <div class="form-row form-actions">
-                        <button id="auth-submit" type="submit" class="button button-primary">Entrar</button>
-                        <button id="auth-mode-toggle" type="button" class="button button-secondary">Criar uma conta</button>
+                        <button id="auth-verify" type="submit" class="button button-primary">Confirmar e entrar</button>
+                        <button id="auth-resend" type="button" class="button button-secondary">Enviar outro código</button>
+                        <button id="auth-change-email" type="button" class="button button-secondary">Alterar e-mail</button>
                     </div>
                 </form>
                 <div id="account-session" class="account-session" hidden>
                     <p>Conectado como <strong id="account-email"></strong></p>
+                    <a href="#perfil" class="button button-secondary">Editar perfil</a>
                     <a href="#conversas" class="button button-secondary">Abrir conversas</a>
                     <button id="signout-button" type="button" class="button button-primary">Sair da conta</button>
                 </div>
+            </div>
+        </section>
+    </template>
+
+    <template id="tmpl-perfil" data-title="Meu perfil | Ache Seu Pet">
+        <section class="section">
+            <div class="container profile-panel">
+                <div class="section-heading">
+                    <span class="eyebrow">Seu perfil</span>
+                    <h2>Suas informações e atividade</h2>
+                </div>
+                <p id="profile-notice" class="form-notice" role="status" aria-live="polite"></p>
+                <form id="profile-form" class="search-form profile-form" aria-label="Editar perfil">
+                    <div class="profile-avatar-preview">
+                        <img id="profile-avatar-preview" alt="Prévia da foto de perfil" hidden>
+                        <span id="profile-avatar-placeholder" aria-hidden="true">🐾</span>
+                    </div>
+                    <div class="form-row">
+                        <label for="profile-name">Nome exibido</label>
+                        <input id="profile-name" name="displayName" type="text" minlength="2" maxlength="40" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="profile-avatar">Foto de perfil (JPG, PNG ou WebP; até 5 MB)</label>
+                        <input id="profile-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp">
+                    </div>
+                    <div class="form-row form-actions">
+                        <button type="submit" class="button button-primary">Salvar perfil</button>
+                        <button id="profile-signout-button" type="button" class="button button-secondary">Sair da conta</button>
+                    </div>
+                </form>
+                <div class="profile-stat-grid" id="profile-stat-grid" aria-live="polite"></div>
+                <p class="profile-privacy-note">Seu perfil não exibe e-mail nem telefone. O contato acontece somente pelo chat do site.</p>
             </div>
         </section>
     </template>
@@ -92,6 +135,7 @@
                     <section class="chat-panel" aria-label="Mensagens da conversa">
                         <div id="chat-report-summary" class="chat-report-summary"></div>
                         <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div>
+                        <div id="conversation-rating" class="conversation-rating" hidden></div>
                         <form id="chat-form" class="chat-form" hidden>
                             <label class="sr-only" for="chat-message">Escreva sua mensagem</label>
                             <textarea id="chat-message" name="message" rows="2" maxlength="2000" required placeholder="Escreva uma mensagem para o tutor"></textarea>
@@ -240,6 +284,7 @@
                             <label class="event-option"><input type="radio" name="eventType" value="Vi um animal perdido"><span>Vi um animal perdido</span></label>
                             <label class="event-option"><input type="radio" name="eventType" value="Animal silvestre encontrado"><span>Animal silvestre encontrado</span></label>
                             <label class="event-option"><input type="radio" name="eventType" value="Preciso de ajuda para resgate"><span>Preciso de ajuda para resgate</span></label>
+                            <label class="event-option"><input type="radio" name="eventType" value="Animal para adoção"><span>Animal para adoção</span></label>
                         </div>
                     </fieldset>
 

@@ -7,13 +7,13 @@ const supabaseClient = supabaseConfig.url && supabaseConfig.anonKey && supabaseF
 let currentSession = null;
 let currentUser = null;
 
-function updateAuthSession(session) {
+function updateAuthSession(session, eventType = 'SIGNED_IN') {
     currentSession = session;
     currentUser = session?.user || null;
     const user = currentUser;
     window.setTimeout(() => {
         window.dispatchEvent(new CustomEvent('achepet:authchange', {
-            detail: {user}
+            detail: {user, eventType}
         }));
     }, 0);
 }
@@ -23,8 +23,8 @@ async function initializeBackend() {
 
     const {data, error} = await supabaseClient.auth.getSession();
     if (error) throw error;
-    updateAuthSession(data.session);
-    supabaseClient.auth.onAuthStateChange((_event, session) => updateAuthSession(session));
+    updateAuthSession(data.session, 'INITIAL_SESSION');
+    supabaseClient.auth.onAuthStateChange((event, session) => updateAuthSession(session, event));
     return data.session;
 }
 
@@ -44,25 +44,22 @@ async function requireUser() {
     return currentUser;
 }
 
-async function signIn(email, password) {
+async function requestEmailCode(email) {
     await requireBackend();
-    const {data, error} = await supabaseClient.auth.signInWithPassword({email, password});
-    if (error) throw error;
-    updateAuthSession(data.session);
-    return data.user;
-}
-
-async function signUp(email, password) {
-    await requireBackend();
-    const {data, error} = await supabaseClient.auth.signUp({
+    const {data, error} = await supabaseClient.auth.signInWithOtp({
         email,
-        password,
-        options: {
-            emailRedirectTo: `${window.location.origin}${window.location.pathname}`
-        }
+        options: {shouldCreateUser: true}
     });
     if (error) throw error;
-    if (data.session) updateAuthSession(data.session);
+    return data;
+}
+
+async function verifyEmailCode(email, token) {
+    await requireBackend();
+    if (!/^\d{6}$/.test(String(token))) throw new Error('Digite o código de 6 dígitos enviado por e-mail.');
+    const {data, error} = await supabaseClient.auth.verifyOtp({email, token, type: 'email'});
+    if (error) throw error;
+    updateAuthSession(data.session);
     return data;
 }
 
@@ -70,7 +67,7 @@ async function signOut() {
     await requireBackend();
     const {error} = await supabaseClient.auth.signOut();
     if (error) throw error;
-    updateAuthSession(null);
+    updateAuthSession(null, 'SIGNED_OUT');
 }
 
 async function listReports() {
@@ -252,6 +249,153 @@ async function deleteReport(reportId) {
     if (!data) throw new Error('A ocorrência não existe ou não pertence à sua conta.');
 }
 
+async function markReportReunited(reportId) {
+    const user = await requireUser();
+    const {data, error} = await supabaseClient
+        .from('reports')
+        .update({reunited_at: new Date().toISOString()})
+        .eq('id', reportId)
+        .eq('owner_id', user.id)
+        .eq('event_type', 'Meu animal está perdido')
+        .eq('status', 'Perdido')
+        .is('reunited_at', null)
+        .select('*')
+        .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new Error('Não foi possível marcar esta ocorrência como reencontrada.');
+    return addReportPhotoUrl(data);
+}
+
+async function getProfile(profileId) {
+    await requireUser();
+    const [profileResult, reportsResult, ratingsResult] = await Promise.all([
+        supabaseClient.from('profiles')
+            .select('id, display_name, avatar_path, created_at')
+            .eq('id', profileId)
+            .maybeSingle(),
+        supabaseClient.from('reports')
+            .select('event_type')
+            .eq('owner_id', profileId),
+        supabaseClient.from('profile_ratings')
+            .select('stars')
+            .eq('rated_user_id', profileId)
+    ]);
+    if (profileResult.error) throw profileResult.error;
+    if (reportsResult.error) throw reportsResult.error;
+    if (ratingsResult.error) throw ratingsResult.error;
+    if (!profileResult.data) return null;
+
+    const reportTypes = reportsResult.data.map(report => report.event_type);
+    const stars = ratingsResult.data.map(rating => rating.stars);
+    const {data: avatarData, error: avatarError} = profileResult.data.avatar_path
+        ? await supabaseClient.storage.from('profile-avatars')
+            .createSignedUrl(profileResult.data.avatar_path, 3600)
+        : {data: {signedUrl: null}};
+    if (avatarError) throw avatarError;
+    return {
+        ...profileResult.data,
+        avatar_url: avatarData.signedUrl,
+        stats: {
+            found: reportTypes.filter(type => [
+                'Encontrei um animal',
+                'Encontrei um animal abandonado'
+            ].includes(type)).length,
+            lost: reportTypes.filter(type => type === 'Meu animal está perdido').length,
+            adoption: reportTypes.filter(type => type === 'Animal para adoção').length,
+            ratingAverage: stars.length
+                ? stars.reduce((total, value) => total + value, 0) / stars.length
+                : 0,
+            ratingCount: stars.length
+        }
+    };
+}
+
+async function updateProfile(displayName, avatarFile = null) {
+    const user = await requireUser();
+    const normalizedName = String(displayName || '').trim();
+    if (normalizedName.length < 2 || normalizedName.length > 40) {
+        throw new Error('O nome do perfil deve ter entre 2 e 40 caracteres.');
+    }
+
+    const currentProfileResult = await supabaseClient.from('profiles')
+        .select('avatar_path')
+        .eq('id', user.id)
+        .maybeSingle();
+    if (currentProfileResult.error) throw currentProfileResult.error;
+    const oldAvatarPath = currentProfileResult.data?.avatar_path || null;
+    let newAvatarPath = null;
+    const storage = supabaseClient.storage.from('profile-avatars');
+    if (avatarFile) {
+        const extensionByType = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp'
+        };
+        const extension = extensionByType[avatarFile.type];
+        if (!extension || avatarFile.size > 5 * 1024 * 1024) {
+            throw new Error('Escolha uma imagem JPG, PNG ou WebP de até 5 MB.');
+        }
+        newAvatarPath = `${user.id}/${Date.now()}.${extension}`;
+        const {error} = await storage.upload(newAvatarPath, avatarFile, {
+            contentType: avatarFile.type,
+            upsert: false
+        });
+        if (error) throw error;
+    }
+
+    const changes = {display_name: normalizedName};
+    if (newAvatarPath) changes.avatar_path = newAvatarPath;
+    const {data, error} = await supabaseClient.from('profiles')
+        .update(changes)
+        .eq('id', user.id)
+        .select('id')
+        .maybeSingle();
+    if (error || !data) {
+        if (newAvatarPath) {
+            const {error: cleanupError} = await storage.remove([newAvatarPath]);
+            if (cleanupError) console.error('Could not clean up an unlinked profile photo:', cleanupError);
+        }
+        if (error) throw error;
+        throw new Error('Não foi possível salvar seu perfil.');
+    }
+
+    if (newAvatarPath && oldAvatarPath) {
+        const {error: removeError} = await storage.remove([oldAvatarPath]);
+        if (removeError) console.error('Could not remove the replaced profile photo:', removeError);
+    }
+    return getProfile(user.id);
+}
+
+async function getMyRating(conversationId) {
+    const user = await requireUser();
+    const {data, error} = await supabaseClient.from('profile_ratings')
+        .select('stars')
+        .eq('conversation_id', conversationId)
+        .eq('rater_id', user.id)
+        .maybeSingle();
+    if (error) throw error;
+    return data;
+}
+
+async function rateConversation(conversationId, stars) {
+    const user = await requireUser();
+    const rating = Number(stars);
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+        throw new Error('Escolha uma avaliação entre 1 e 5 estrelas.');
+    }
+    const conversation = await getConversation(conversationId);
+    const ratedUserId = conversation.owner_id === user.id
+        ? conversation.visitor_id
+        : conversation.owner_id;
+    const {error} = await supabaseClient.from('profile_ratings').insert({
+        conversation_id: conversationId,
+        rater_id: user.id,
+        rated_user_id: ratedUserId,
+        stars: rating
+    });
+    if (error) throw error;
+}
+
 async function submitAbuseReport(reportId, reason, details) {
     const user = await requireUser();
     const allowedReasons = [
@@ -300,7 +444,7 @@ async function listConversations() {
 async function openConversation(reportId) {
     const user = await requireUser();
     const report = await getReport(reportId);
-    if (!report || report.status !== 'Perdido') {
+    if (!report || report.status !== 'Perdido' || report.reunited_at) {
         throw new Error('Esta ocorrência não está mais disponível para contato.');
     }
     if (report.owner_id === user.id) {
@@ -419,8 +563,8 @@ window.achePetBackend = {
     isConfigured: Boolean(supabaseClient),
     getCurrentUser: () => currentUser,
     getCurrentSession: () => currentSession,
-    signIn,
-    signUp,
+    requestEmailCode,
+    verifyEmailCode,
     signOut,
     listReports,
     getReport,
@@ -428,6 +572,11 @@ window.achePetBackend = {
     updateReport,
     listOwnReports,
     deleteReport,
+    markReportReunited,
+    getProfile,
+    updateProfile,
+    getMyRating,
+    rateConversation,
     submitAbuseReport,
     listConversations,
     openConversation,

@@ -126,7 +126,7 @@ function escapeHTML(value) {
 function setStatusClass(status) {
     const normalized = status.toLowerCase().replace(/\s+/g, '-');
     if (normalized.includes('perdido')) return 'status-perdido';
-    if (normalized.includes('encontrado')) return 'status-encontrado';
+    if (normalized.includes('encontrado') || normalized.includes('reencontrado')) return 'status-encontrado';
     if (normalized.includes('adoção') || normalized.includes('adoçao')) return 'status-adoção';
     if (normalized.includes('resgate')) return 'status-resgate';
     return 'status-silvestre';
@@ -141,9 +141,12 @@ function reportToAnimal(report) {
         'Encontrei um animal abandonado': {label: 'Abandonado', tag: 'abandonado'},
         'Vi um animal perdido': {label: 'Perdido', tag: 'perdido'},
         'Animal silvestre encontrado': {label: 'Silvestre avistado', tag: 'silvestre_avistado'},
-        'Preciso de ajuda para resgate': {label: 'Resgate solicitado', tag: 'resgate_solicitado'}
+        'Preciso de ajuda para resgate': {label: 'Resgate solicitado', tag: 'resgate_solicitado'},
+        'Animal para adoção': {label: 'Em Adoção', tag: 'para_adocao'}
     };
-    const status = statusByEvent[eventType] || {label: 'Recebido', tag: 'recebido'};
+    const status = report.reunited_at
+        ? {label: 'Reencontrado', tag: 'reencontrado'}
+        : statusByEvent[eventType] || {label: 'Recebido', tag: 'recebido'};
     const isWild = eventType === 'Animal silvestre encontrado' || species.toLowerCase().includes('silvestre');
     const date = report.event_date || report.date;
     const parsedDate = date ? new Date(`${date}T00:00:00`) : null;
