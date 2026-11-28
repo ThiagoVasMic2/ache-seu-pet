@@ -60,7 +60,13 @@ async function initAuthPage() {
         form.hidden = true;
         codeForm.hidden = true;
         if (session) session.hidden = true;
-        setFormNotice(notice, 'A autenticação está indisponível até configurar a URL e a chave pública do Supabase.');
+        const config = window.ACHEPET_SUPABASE_CONFIG || {};
+        const setupMessage = config.url && !config.anonKey
+            ? 'A URL já está configurada. Falta a chave pública anon/publishable do Supabase.'
+            : !config.url
+                ? 'A autenticação está indisponível até configurar a URL e a chave pública do Supabase.'
+                : 'Não foi possível carregar o cliente do Supabase. Confira se a biblioteca está disponível.';
+        setFormNotice(notice, setupMessage);
         return;
     }
 
