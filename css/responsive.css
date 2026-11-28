@@ -125,6 +125,14 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .photo-upload-layout {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .photo-preview {
+        width: min(100%, 220px);
+    }
+
     #map {
         min-height: 320px;
     }

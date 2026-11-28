@@ -304,8 +304,16 @@
                             </div>
                             <div class="form-row report-full-width">
                                 <label for="animal-photos">Foto principal (opcional)</label>
-                                <input id="animal-photos" name="photos" type="file" accept="image/*">
-                                <small class="field-note">A foto será reduzida para carregar mais rápido e aparecerá no cartão do animal.</small>
+                                <div class="photo-upload-layout">
+                                    <div class="photo-upload-control">
+                                        <input id="animal-photos" name="photos" type="file" accept="image/*">
+                                        <small class="field-note">A foto será reduzida para carregar mais rápido e aparecerá no cartão do animal.</small>
+                                    </div>
+                                    <figure id="animal-photo-preview" class="photo-preview" hidden>
+                                        <img id="animal-photo-preview-image" alt="Prévia da foto selecionada">
+                                        <figcaption id="animal-photo-preview-name"></figcaption>
+                                    </figure>
+                                </div>
                             </div>
                             <div class="form-row report-full-width">
                                 <small class="field-note">Quem encontrar o animal poderá iniciar uma conversa privada pelo site. Seu e-mail não será exibido na ocorrência.</small>

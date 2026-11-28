@@ -2,6 +2,7 @@ function initReportForm() {
     const form = document.getElementById('report-form');
     if (!form) return;
 
+    initReportPhotoPreview(form);
     form.removeEventListener?.('submit', form._reportHandler);
 
     const handler = async event => {
@@ -73,6 +74,40 @@ function initReportForm() {
 
     form.addEventListener('submit', handler);
     form._reportHandler = handler;
+}
+
+function initReportPhotoPreview(form) {
+    if (form.dataset.photoPreviewInitialized === 'true') return;
+    const input = document.getElementById('animal-photos');
+    const preview = document.getElementById('animal-photo-preview');
+    const image = document.getElementById('animal-photo-preview-image');
+    const filename = document.getElementById('animal-photo-preview-name');
+    if (!input || !preview || !image || !filename) return;
+
+    form.dataset.photoPreviewInitialized = 'true';
+    let previewUrl = null;
+    const clearPreview = () => {
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = null;
+        image.removeAttribute('src');
+        filename.textContent = '';
+        preview.hidden = true;
+    };
+
+    input.addEventListener('change', () => {
+        clearPreview();
+        const file = input.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            input.value = '';
+            return;
+        }
+        previewUrl = URL.createObjectURL(file);
+        image.src = previewUrl;
+        filename.textContent = file.name;
+        preview.hidden = false;
+    });
+    form.addEventListener('reset', clearPreview);
 }
 
 async function prepareReportPhoto(file) {

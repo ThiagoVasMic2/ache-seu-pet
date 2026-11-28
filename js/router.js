@@ -131,7 +131,8 @@ async function renderAnimalDetail(searchParams) {
         ? `<a class="button button-primary" href="#conversas?reportId=${encodeURIComponent(selectedAnimal.id)}">Encontrei seu pet</a>`
         : '';
     container.innerHTML = `
-        <div class="card-panel" style="gap:1rem;">
+        <div class="card-panel animal-detail-panel" style="gap:1rem;">
+            <a class="button button-secondary animal-detail-close" href="#animais" aria-label="Fechar detalhes e voltar à busca" title="Voltar à busca">×</a>
             <div style="flex:1;min-width:280px;">
                 <img src="${imagePath}" alt="${escapeHTML(selectedAnimal.name)}" style="width:100%;border-radius:16px;" loading="lazy">
             </div>
