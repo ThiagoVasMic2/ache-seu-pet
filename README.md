@@ -43,6 +43,7 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 - Chat privado em tempo real entre quem publicou e quem encontrou o animal
 - Página de mapa com marcadores e filtros de status
 - Design acessível com HTML semântico e foco visível
+- Sem Supabase configurado, ocorrências são salvas apenas no navegador atual e não ficam públicas
 
 ## Configurar Supabase
 

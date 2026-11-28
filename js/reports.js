@@ -8,11 +8,6 @@ function initReportForm() {
         event.preventDefault();
         const notice = document.getElementById('report-notice');
         const backend = window.achePetBackend;
-        if (!backend?.isConfigured) {
-            if (notice) notice.textContent = 'O sistema de publicação ainda não está configurado. Consulte a configuração do Supabase no README.';
-            return;
-        }
-
         const submitButton = form.querySelector('button[type="submit"]');
         if (submitButton?.disabled) return;
         if (submitButton) {
@@ -21,12 +16,6 @@ function initReportForm() {
         }
 
         try {
-            await backend.ready;
-            if (!backend.getCurrentUser()) {
-                if (notice) notice.innerHTML = 'Entre na sua conta para publicar. <a href="#conta">Entrar ou criar uma conta</a>.';
-                return;
-            }
-
             const formData = new FormData(form);
             const report = {
                 eventType: formData.get('eventType'),
@@ -41,6 +30,22 @@ function initReportForm() {
                 region: formData.get('region'),
                 description: formData.get('description')
             };
+
+            if (!backend?.isConfigured) {
+                report.id = `local-${Date.now()}`;
+                window.achePetStore.helpers.saveReport(report);
+                if (notice) {
+                    notice.textContent = 'Ocorrência salva neste navegador e disponível na busca local. Para que outras pessoas a vejam, configure o Supabase.';
+                }
+                form.reset();
+                return;
+            }
+
+            await backend.ready;
+            if (!backend.getCurrentUser()) {
+                if (notice) notice.innerHTML = 'Entre na sua conta para publicar. <a href="#conta">Entrar ou criar uma conta</a>.';
+                return;
+            }
 
             const savedReport = await backend.createReport(report);
             const animal = reportToAnimal(savedReport);
