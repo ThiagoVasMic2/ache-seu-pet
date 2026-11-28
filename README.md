@@ -54,12 +54,13 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 ## Configurar Supabase
 
 1. Crie um projeto no Supabase.
-2. No SQL Editor do projeto, execute `supabase/schema.sql`. O script cria/atualiza as tabelas, políticas RLS, publicação Realtime, bucket público de fotos, bucket privado de avatares e a fila privada de denúncias. Se já executou uma versão anterior, execute novamente para aplicar as atualizações.
-3. Copie a URL do projeto e a chave pública `anon`/`publishable` para `js/supabase-config.js`.
-4. Em Authentication → URL Configuration, configure os endereços permitidos do site.
-5. Em Authentication → Providers → Email, configure o tamanho do OTP como 6. Em Email Templates, inclua `{{ .Token }}` nos modelos Magic Link e Confirm signup; o fluxo do site verifica o código, não um link mágico.
-6. Configure um provedor SMTP confiável e os limites de envio de e-mail no Supabase antes de publicar para usuários reais.
-7. Teste criando uma conta com um e-mail válido. O mesmo formulário entra em contas existentes ou cria uma conta nova após validar o código.
+2. No terminal, autentique e vincule o CLI ao projeto: `npx supabase login` e `npx supabase link --project-ref SEU_PROJECT_REF`.
+3. Execute `npx supabase db push` para aplicar a migration inicial em `supabase/migrations/`. Ela mantém o banco alinhado ao schema atual. Como alternativa, execute `supabase/schema.sql` no SQL Editor do painel.
+4. Copie a URL do projeto e a chave pública `anon`/`publishable` para `js/supabase-config.js`.
+5. Em Authentication → URL Configuration, configure os endereços permitidos do site.
+6. Em Authentication → Providers → Email, configure o tamanho do OTP como 6. Em Email Templates, inclua `{{ .Token }}` nos modelos Magic Link e Confirm signup; o fluxo do site verifica o código, não um link mágico.
+7. Configure um provedor SMTP confiável e os limites de envio de e-mail no Supabase antes de publicar para usuários reais.
+8. Teste criando uma conta com um e-mail válido. O mesmo formulário entra em contas existentes ou cria uma conta nova após validar o código.
 
 **Nunca use a chave `service_role` no navegador nem a envie ao GitHub.** A chave pública é usada no cliente; a segurança dos dados depende das políticas RLS definidas no schema.
 
