@@ -44,22 +44,124 @@ async function requireUser() {
     return currentUser;
 }
 
-async function requestEmailCode(email) {
+function normalizePhone(value) {
+    const rawPhone = String(value || '').trim();
+    const digits = rawPhone.replace(/\D/g, '');
+    if (rawPhone.startsWith('+')) {
+        if (digits.length < 10 || digits.length > 15 || digits.startsWith('0')) {
+            throw new Error('Informe um telefone válido com código do país.');
+        }
+        return `+${digits}`;
+    }
+    if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+        return `+${digits}`;
+    }
+    if (digits.length === 10 || digits.length === 11) return `+55${digits}`;
+    throw new Error('Informe um telefone válido com DDI, como +55 11 99999-9999.');
+}
+
+async function createAccount({displayName, email, password, whatsappPhone}) {
     await requireBackend();
-    const {data, error} = await supabaseClient.auth.signInWithOtp({
-        email,
-        options: {shouldCreateUser: true}
+    const normalizedName = String(displayName || '').trim();
+    if (normalizedName.length < 2 || normalizedName.length > 40) {
+        throw new Error('O nome deve ter entre 2 e 40 caracteres.');
+    }
+    if (String(password || '').length < 8) {
+        throw new Error('A senha precisa ter pelo menos 8 caracteres.');
+    }
+    const phone = whatsappPhone ? normalizePhone(whatsappPhone) : '';
+    const {data, error} = await supabaseClient.auth.signUp({
+        email: String(email || '').trim().toLowerCase(),
+        password,
+        options: {
+            data: {
+                display_name: normalizedName,
+                whatsapp_phone: phone
+            }
+        }
     });
     if (error) throw error;
     return data;
 }
 
-async function verifyEmailCode(email, token) {
+async function requestEmailCode(email) {
     await requireBackend();
-    if (!/^\d{6}$/.test(String(token))) throw new Error('Digite o código de 6 dígitos enviado por e-mail.');
-    const {data, error} = await supabaseClient.auth.verifyOtp({email, token, type: 'email'});
+    const {data, error} = await supabaseClient.auth.signInWithOtp({
+        email: String(email || '').trim().toLowerCase(),
+        options: {shouldCreateUser: false}
+    });
+    if (error) throw error;
+    return data;
+}
+
+async function requestPhoneCode(phone) {
+    await requireBackend();
+    const {data, error} = await supabaseClient.auth.signInWithOtp({
+        phone: normalizePhone(phone),
+        options: {shouldCreateUser: false}
+    });
+    if (error) throw error;
+    return data;
+}
+
+async function resendSignupCode(email) {
+    await requireBackend();
+    const {data, error} = await supabaseClient.auth.resend({
+        type: 'signup',
+        email: String(email || '').trim().toLowerCase()
+    });
+    if (error) throw error;
+    return data;
+}
+
+async function verifyLoginCode(identifier, token, channel) {
+    await requireBackend();
+    if (!/^\d{6}$/.test(String(token))) throw new Error('Digite o código de 6 dígitos.');
+    const normalizedIdentifier = channel === 'phone'
+        ? normalizePhone(identifier)
+        : String(identifier || '').trim().toLowerCase();
+    const {data, error} = await supabaseClient.auth.verifyOtp(
+        channel === 'phone'
+            ? {phone: normalizedIdentifier, token, type: 'sms'}
+            : {email: normalizedIdentifier, token, type: 'email'}
+    );
     if (error) throw error;
     updateAuthSession(data.session);
+    return data;
+}
+
+async function verifySignupCode(email, token) {
+    await requireBackend();
+    if (!/^\d{6}$/.test(String(token))) throw new Error('Digite o código de 6 dígitos enviado por e-mail.');
+    const {data, error} = await supabaseClient.auth.verifyOtp({
+        email: String(email || '').trim().toLowerCase(),
+        token,
+        type: 'signup'
+    });
+    if (error) throw error;
+    updateAuthSession(data.session);
+    return data;
+}
+
+async function requestPhoneVerification(phone) {
+    await requireUser();
+    const normalizedPhone = normalizePhone(phone);
+    const {data, error} = await supabaseClient.auth.updateUser({phone: normalizedPhone});
+    if (error) throw error;
+    return data;
+}
+
+async function verifyPhoneCode(phone, token) {
+    await requireUser();
+    const normalizedPhone = normalizePhone(phone);
+    if (!/^\d{6}$/.test(String(token))) throw new Error('Digite o código SMS de 6 dígitos.');
+    const {data, error} = await supabaseClient.auth.verifyOtp({
+        phone: normalizedPhone,
+        token,
+        type: 'phone_change'
+    });
+    if (error) throw error;
+    updateAuthSession(data.session || currentSession);
     return data;
 }
 
@@ -310,7 +412,14 @@ async function getProfile(profileId) {
     };
 }
 
-async function updateProfile(displayName, avatarFile = null) {
+async function getMyWhatsappPhone() {
+    const user = await requireUser();
+    const {data, error} = await supabaseClient.rpc('get_my_whatsapp_phone');
+    if (error) throw error;
+    return data || '';
+}
+
+async function updateProfile(displayName, avatarFile = null, whatsappPhone = '') {
     const user = await requireUser();
     const normalizedName = String(displayName || '').trim();
     if (normalizedName.length < 2 || normalizedName.length > 40) {
@@ -343,7 +452,8 @@ async function updateProfile(displayName, avatarFile = null) {
         if (error) throw error;
     }
 
-    const changes = {display_name: normalizedName};
+    const normalizedPhone = whatsappPhone ? normalizePhone(whatsappPhone) : '';
+    const changes = {display_name: normalizedName, whatsapp_phone: normalizedPhone || null};
     if (newAvatarPath) changes.avatar_path = newAvatarPath;
     const {data, error} = await supabaseClient.from('profiles')
         .update(changes)
@@ -433,11 +543,37 @@ async function listConversations() {
         .or(`owner_id.eq.${user.id},visitor_id.eq.${user.id}`)
         .order('updated_at', {ascending: false});
     if (error) throw error;
+    const participantIds = [...new Set(data.map(conversation =>
+        conversation.owner_id === user.id ? conversation.visitor_id : conversation.owner_id
+    ))];
+    const profiles = await getProfiles(participantIds);
+    const profilesById = new Map(profiles.map(profile => [profile.id, profile]));
     return data.map(conversation => ({
         ...conversation,
+        otherProfile: profilesById.get(conversation.owner_id === user.id
+            ? conversation.visitor_id
+            : conversation.owner_id) || null,
         report: Array.isArray(conversation.reports)
             ? conversation.reports[0]
             : conversation.reports
+    }));
+}
+
+async function getProfiles(profileIds) {
+    await requireUser();
+    const ids = [...new Set(profileIds.filter(Boolean))];
+    if (!ids.length) return [];
+    const {data, error} = await supabaseClient.from('profiles')
+        .select('id, display_name, avatar_path')
+        .in('id', ids);
+    if (error) throw error;
+    return Promise.all(data.map(async profile => {
+        if (!profile.avatar_path) return {...profile, avatar_url: null};
+        const {data: avatar, error: avatarError} = await supabaseClient.storage
+            .from('profile-avatars')
+            .createSignedUrl(profile.avatar_path, 3600);
+        if (avatarError) throw avatarError;
+        return {...profile, avatar_url: avatar.signedUrl};
     }));
 }
 
@@ -492,9 +628,25 @@ async function getConversation(conversationId) {
         .maybeSingle();
     if (error) throw error;
     if (!data) throw new Error('Conversa não encontrada ou sem permissão de acesso.');
-    return {
+    const conversation = {
         ...data,
         report: Array.isArray(data.reports) ? data.reports[0] : data.reports
+    };
+    const user = currentUser;
+    const otherUserId = conversation.owner_id === user.id
+        ? conversation.visitor_id
+        : conversation.owner_id;
+    const [otherProfile, contactResult] = await Promise.all([
+        getProfiles([otherUserId]),
+        supabaseClient.rpc('get_conversation_contact', {
+            p_conversation_id: conversationId
+        })
+    ]);
+    if (contactResult.error) throw contactResult.error;
+    return {
+        ...conversation,
+        otherProfile: otherProfile[0] || null,
+        contact: Array.isArray(contactResult.data) ? contactResult.data[0] || null : contactResult.data
     };
 }
 
@@ -502,29 +654,59 @@ async function listMessages(conversationId) {
     await requireUser();
     const {data, error} = await supabaseClient
         .from('messages')
-        .select('id, conversation_id, sender_id, body, created_at')
+        .select('id, conversation_id, sender_id, body, image_path, created_at')
         .eq('conversation_id', conversationId)
         .order('created_at', {ascending: true});
     if (error) throw error;
-    return data;
+    return Promise.all(data.map(async message => {
+        if (!message.image_path) return message;
+        const {data: image, error: imageError} = await supabaseClient.storage
+            .from('chat-images')
+            .createSignedUrl(message.image_path, 3600);
+        if (imageError) throw imageError;
+        return {...message, image_url: image.signedUrl};
+    }));
 }
 
-async function sendMessage(conversationId, body) {
+async function sendMessage(conversationId, body, imageFile = null) {
     const user = await requireUser();
     const trimmedBody = String(body || '').trim();
-    if (!trimmedBody || trimmedBody.length > 2000) {
+    if ((!trimmedBody && !imageFile) || trimmedBody.length > 2000) {
         throw new Error('A mensagem deve ter entre 1 e 2000 caracteres.');
+    }
+    let imagePath = null;
+    if (imageFile) {
+        const extensionByType = {
+            'image/jpeg': 'jpg',
+            'image/png': 'png',
+            'image/webp': 'webp'
+        };
+        const extension = extensionByType[imageFile.type];
+        if (!extension || imageFile.size > 5 * 1024 * 1024) {
+            throw new Error('Escolha uma imagem JPG, PNG ou WebP de até 5 MB.');
+        }
+        imagePath = `${conversationId}/${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+        const {error: uploadError} = await supabaseClient.storage.from('chat-images')
+            .upload(imagePath, imageFile, {contentType: imageFile.type, upsert: false});
+        if (uploadError) throw uploadError;
     }
     const {data, error} = await supabaseClient
         .from('messages')
         .insert({
             conversation_id: conversationId,
             sender_id: user.id,
-            body: trimmedBody
+            body: trimmedBody,
+            image_path: imagePath
         })
         .select('*')
         .single();
-    if (error) throw error;
+    if (error) {
+        if (imagePath) {
+            const {error: cleanupError} = await supabaseClient.storage.from('chat-images').remove([imagePath]);
+            if (cleanupError) console.error('Could not clean up an unsent chat image:', cleanupError);
+        }
+        throw error;
+    }
     return data;
 }
 
@@ -563,8 +745,14 @@ window.achePetBackend = {
     isConfigured: Boolean(supabaseClient),
     getCurrentUser: () => currentUser,
     getCurrentSession: () => currentSession,
+    createAccount,
     requestEmailCode,
-    verifyEmailCode,
+    requestPhoneCode,
+    resendSignupCode,
+    verifyLoginCode,
+    verifySignupCode,
+    requestPhoneVerification,
+    verifyPhoneCode,
     signOut,
     listReports,
     getReport,
@@ -574,6 +762,7 @@ window.achePetBackend = {
     deleteReport,
     markReportReunited,
     getProfile,
+    getMyWhatsappPhone,
     updateProfile,
     getMyRating,
     rateConversation,

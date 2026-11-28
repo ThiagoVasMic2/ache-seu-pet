@@ -54,16 +54,54 @@
             <div class="container account-panel">
                 <div class="section-heading">
                     <span class="eyebrow">Sua conta</span>
-                    <h2>Entre ou crie sua conta com e-mail</h2>
+                    <h2>Acesse sua conta ou cadastre-se</h2>
                 </div>
                 <p id="auth-notice" class="form-notice" role="status" aria-live="polite"></p>
-                <form id="auth-form" class="search-form account-form" aria-label="Entrar ou criar uma conta">
+                <div id="auth-mode-switch" class="auth-mode-switch" role="group" aria-label="Tipo de acesso">
+                    <button id="auth-show-login" class="button button-secondary" type="button" aria-pressed="false">Entrar</button>
+                    <button id="auth-show-signup" class="button button-secondary" type="button" aria-pressed="true">Criar cadastro</button>
+                </div>
+                <form id="auth-signup-form" class="search-form account-form" aria-label="Criar cadastro">
                     <div class="form-row">
-                        <label for="auth-email">E-mail</label>
-                        <input id="auth-email" name="email" type="email" autocomplete="email" required>
+                        <label for="auth-signup-name">Nome</label>
+                        <input id="auth-signup-name" name="displayName" type="text" autocomplete="name" minlength="2" maxlength="40" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="auth-signup-email">E-mail</label>
+                        <input id="auth-signup-email" name="email" type="email" autocomplete="email" required>
+                    </div>
+                    <div class="form-row">
+                        <label for="auth-signup-password">Crie uma senha (mínimo 8 caracteres)</label>
+                        <input id="auth-signup-password" name="password" type="password" autocomplete="new-password" minlength="8" required>
+                        <div id="password-strength" class="password-strength" data-strength="empty" aria-live="polite">
+                            <span class="password-strength-meter"><span></span></span>
+                            <span id="password-strength-label">A senha precisa ter pelo menos 8 caracteres.</span>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <label for="auth-signup-phone">Telefone/WhatsApp (opcional, com DDI)</label>
+                        <input id="auth-signup-phone" name="phone" type="tel" autocomplete="tel" placeholder="+55 11 99999-9999">
+                    </div>
+                    <div class="form-row">
+                        <label for="auth-signup-avatar">Foto do perfil (JPG, PNG ou WebP; até 5 MB)</label>
+                        <input id="auth-signup-avatar" name="avatar" type="file" accept="image/jpeg,image/png,image/webp">
+                        <div class="signup-avatar-preview">
+                            <img id="auth-signup-avatar-preview" alt="Prévia da foto de perfil" hidden>
+                            <span id="auth-signup-avatar-placeholder" aria-hidden="true">🐾</span>
+                        </div>
                     </div>
                     <div class="form-row form-actions">
-                        <button id="auth-submit" type="submit" class="button button-primary">Enviar código de acesso</button>
+                        <button id="auth-signup-submit" type="submit" class="button button-primary">Criar conta e receber código</button>
+                    </div>
+                </form>
+                <form id="auth-login-form" class="search-form account-form" aria-label="Entrar com código" hidden>
+                    <div class="form-row">
+                        <label for="auth-login-identifier">E-mail ou telefone verificado</label>
+                        <input id="auth-login-identifier" name="identifier" type="text" autocomplete="username" required>
+                        <small>O código por telefone exige SMS habilitado no Supabase.</small>
+                    </div>
+                    <div class="form-row form-actions">
+                        <button id="auth-login-submit" type="submit" class="button button-primary">Enviar código de acesso</button>
                     </div>
                 </form>
                 <form id="auth-code-form" class="search-form account-form" aria-label="Confirmar código de acesso" hidden>
@@ -74,7 +112,7 @@
                     <div class="form-row form-actions">
                         <button id="auth-verify" type="submit" class="button button-primary">Confirmar e entrar</button>
                         <button id="auth-resend" type="button" class="button button-secondary">Enviar outro código</button>
-                        <button id="auth-change-email" type="button" class="button button-secondary">Alterar e-mail</button>
+                        <button id="auth-change-email" type="button" class="button button-secondary">Voltar</button>
                     </div>
                 </form>
                 <div id="account-session" class="account-session" hidden>
@@ -114,7 +152,25 @@
                     </div>
                 </form>
                 <div class="profile-stat-grid" id="profile-stat-grid" aria-live="polite"></div>
-                <p class="profile-privacy-note">Seu perfil não exibe e-mail nem telefone. O contato acontece somente pelo chat do site.</p>
+                <form id="profile-contact-form" class="search-form profile-form" aria-label="Informações de contato">
+                <div class="form-row">
+                    <label for="profile-whatsapp">Telefone/WhatsApp (opcional, com DDI)</label>
+                    <input id="profile-whatsapp" name="whatsappPhone" type="tel" autocomplete="tel" placeholder="+55 11 99999-9999">
+                    <small>Para entrar usando telefone e compartilhá-lo na conversa, confirme o número por SMS. O provedor SMS precisa estar configurado no Supabase.</small>
+                </div>
+                <div class="form-row form-actions">
+                    <button id="profile-save-contact" type="submit" class="button button-secondary">Salvar telefone</button>
+                    <button id="profile-verify-phone" type="button" class="button button-secondary">Enviar código para confirmar telefone</button>
+                </div>
+                </form>
+                <form id="profile-phone-code-form" class="search-form profile-form" aria-label="Confirmar telefone" hidden>
+                    <div class="form-row">
+                        <label for="profile-phone-code">Código SMS</label>
+                        <input id="profile-phone-code" name="phoneCode" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" required>
+                    </div>
+                    <button type="submit" class="button button-secondary">Confirmar telefone</button>
+                </form>
+                <p class="profile-privacy-note">E-mail e WhatsApp só são compartilhados com a outra pessoa dentro de uma conversa.</p>
             </div>
         </section>
     </template>
@@ -134,11 +190,15 @@
                     </aside>
                     <section class="chat-panel" aria-label="Mensagens da conversa">
                         <div id="chat-report-summary" class="chat-report-summary"></div>
+                        <div id="chat-contact-card" class="chat-contact-card" hidden></div>
                         <div id="chat-messages" class="chat-messages" role="log" aria-live="polite"></div>
                         <div id="conversation-rating" class="conversation-rating" hidden></div>
                         <form id="chat-form" class="chat-form" hidden>
+                            <label class="chat-image-button button button-secondary" for="chat-image">Imagem</label>
+                            <input id="chat-image" class="sr-only" type="file" accept="image/jpeg,image/png,image/webp">
+                            <span id="chat-image-name" class="chat-image-name" aria-live="polite"></span>
                             <label class="sr-only" for="chat-message">Escreva sua mensagem</label>
-                            <textarea id="chat-message" name="message" rows="2" maxlength="2000" required placeholder="Escreva uma mensagem para o tutor"></textarea>
+                            <textarea id="chat-message" name="message" rows="2" maxlength="2000" placeholder="Escreva uma mensagem para o tutor"></textarea>
                             <button type="submit" class="button button-primary">Enviar</button>
                         </form>
                     </section>

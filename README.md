@@ -38,14 +38,15 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 - Página inicial com hero, busca rápida, categorias, adição de cards e parceiros
 - Busca de animais com filtros por tipo, situação, cidade e raio
 - Cadastro de ocorrências associado à conta autenticada
-- Acesso obrigatório por código numérico de 6 dígitos enviado por e-mail, sem senha
-- Perfil com nome, avatar privado e estatísticas de participação
+- Cadastro com nome, e-mail, senha com indicador de força, telefone/WhatsApp opcional e foto
+- Login separado por código de 6 dígitos no e-mail; telefone pode ser usado após verificação por SMS
+- Perfil com nome, avatar privado, telefone e estatísticas de participação
 - Encerramento de ocorrência de animal perdido como reencontrado e avaliações entre participantes
 - Cadastro e divulgação de animais para adoção
 - Edição de ocorrências pelo próprio autor
 - Área compacta no topo para acompanhar postagens próprias e conversas recentes
 - Remoção de postagens próprias
-- Chat privado em tempo real entre quem publicou e quem encontrou o animal
+- Chat privado em tempo real com avatar e nome, imagens e contatos visíveis apenas aos participantes
 - Denúncias privadas de golpes, pedidos de dinheiro, abuso e suspeita de conta invadida
 - Página de mapa com marcadores e filtros de status
 - Design acessível com HTML semântico e foco visível
@@ -55,12 +56,14 @@ O projeto oferece uma experiência moderna para encontrar animais perdidos, regi
 
 1. Crie um projeto no Supabase.
 2. No terminal, autentique e vincule o CLI ao projeto: `npx supabase login` e `npx supabase link --project-ref SEU_PROJECT_REF`.
-3. Execute `npx supabase db push` para aplicar a migration inicial em `supabase/migrations/`. Ela mantém o banco alinhado ao schema atual. Como alternativa, execute `supabase/schema.sql` no SQL Editor do painel.
+3. Execute `npx supabase db push` para aplicar as migrations em `supabase/migrations/`. Se o schema inicial já foi aplicado manualmente, aplique também o conteúdo de `supabase/migrations/20261128171100_accounts_chat_enhancements.sql` no SQL Editor. Para um projeto novo, use `supabase/schema.sql`.
 4. Copie a URL do projeto e a chave pública `anon`/`publishable` para `js/supabase-config.js`.
 5. Em Authentication → URL Configuration, configure os endereços permitidos do site.
-6. Em Authentication → Providers → Email, configure o tamanho do OTP como 6. Em Email Templates, inclua `{{ .Token }}` nos modelos Magic Link e Confirm signup; o fluxo do site verifica o código, não um link mágico.
-7. Configure um provedor SMTP confiável e os limites de envio de e-mail no Supabase antes de publicar para usuários reais.
-8. Teste criando uma conta com um e-mail válido. O mesmo formulário entra em contas existentes ou cria uma conta nova após validar o código.
+6. Em Authentication → Providers → Email, configure o tamanho do OTP como 6 e mantenha a confirmação de e-mail ativada.
+7. Em Authentication → Email Templates, use o assunto `Seu código de acesso ao Ache Seu Pet` e copie o conteúdo de `supabase/templates/auth-otp.html` para os modelos Confirm signup e Magic Link. O template usa `{{ .Token }}` para mostrar o código, não um link mágico.
+8. Configure um SMTP próprio e o nome do remetente como `Ache Seu Pet` nas configurações de SMTP do Supabase. Para uma aparência confiável no Gmail, use um domínio verificado com SPF/DKIM; templates personalizados não mudam, sozinhos, o endereço remetente.
+9. Configure um provedor SMS em Authentication → Providers para habilitar códigos por telefone. A pessoa deve confirmar o número no perfil antes de usá-lo para entrar.
+10. Teste criando uma conta com e-mail, senha e código de confirmação; depois use a opção Entrar para solicitar um novo código. A senha é cadastrada, mas o login do site é por código.
 
 **Nunca use a chave `service_role` no navegador nem a envie ao GitHub.** A chave pública é usada no cliente; a segurança dos dados depende das políticas RLS definidas no schema.
 
@@ -68,7 +71,7 @@ As ocorrências antigas guardadas no `localStorage` não são migradas automatic
 
 Denúncias exigem uma conta autenticada e ficam privadas na tabela `abuse_reports`; a revisão é feita pelo responsável do projeto no painel do Supabase. O site não oferece recompensas nem processa pagamentos.
 
-Os avatares ficam em um bucket privado e são exibidos por URLs temporárias apenas para usuários autenticados. Avaliações de 1 a 5 estrelas só podem ser enviadas uma vez por participante em cada conversa, depois de o tutor marcar a ocorrência como reencontrada; o banco valida essa condição por RLS.
+Avatares e imagens do chat ficam em buckets privados e são exibidos por URLs temporárias. E-mail e WhatsApp são entregues pelo banco somente aos participantes daquela conversa. Avaliações de 1 a 5 estrelas só podem ser enviadas uma vez por participante em cada conversa, depois de o tutor marcar a ocorrência como reencontrada; o banco valida essa condição por RLS.
 
 ## Adicionar novos parceiros
 

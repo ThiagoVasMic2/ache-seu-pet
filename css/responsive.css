@@ -200,6 +200,13 @@
         grid-template-columns: minmax(0, 1fr);
     }
 
+    .chat-form textarea,
+    .chat-form > button[type="submit"],
+    .chat-image-name {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
     .rating-form {
         grid-template-columns: minmax(0, 1fr);
     }

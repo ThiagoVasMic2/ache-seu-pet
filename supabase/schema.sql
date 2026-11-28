@@ -55,19 +55,36 @@ create table if not exists public.profiles (
     id uuid primary key references auth.users(id) on delete cascade,
     display_name text not null default '' check (length(display_name) <= 40),
     avatar_path text,
+    whatsapp_phone text,
     created_at timestamptz not null default now()
 );
 
-insert into public.profiles (id, display_name, created_at)
+alter table public.profiles add column if not exists whatsapp_phone text;
+alter table public.profiles drop constraint if exists profiles_whatsapp_phone_check;
+alter table public.profiles add constraint profiles_whatsapp_phone_check
+    check (whatsapp_phone is null or whatsapp_phone ~ '^\+[1-9][0-9]{9,14}$');
+
+insert into public.profiles (id, display_name, whatsapp_phone, created_at)
 select id,
        left(coalesce(
            nullif(raw_user_meta_data->>'display_name', ''),
            nullif(split_part(coalesce(email, ''), '@', 1), ''),
            'Usuário'
        ), 40),
+       case
+           when raw_user_meta_data->>'whatsapp_phone' ~ '^\+[1-9][0-9]{9,14}$'
+           then raw_user_meta_data->>'whatsapp_phone'
+       end,
        created_at
 from auth.users
 on conflict (id) do nothing;
+
+update public.profiles p
+set whatsapp_phone = nullif(u.raw_user_meta_data->>'whatsapp_phone', '')
+from auth.users u
+where p.id = u.id
+  and p.whatsapp_phone is null
+  and u.raw_user_meta_data->>'whatsapp_phone' ~ '^\+[1-9][0-9]{9,14}$';
 
 create table if not exists public.conversations (
     id uuid primary key default gen_random_uuid(),
@@ -84,9 +101,17 @@ create table if not exists public.messages (
     id uuid primary key default gen_random_uuid(),
     conversation_id uuid not null references public.conversations(id) on delete cascade,
     sender_id uuid not null references auth.users(id) on delete cascade,
-    body text not null check (length(trim(body)) between 1 and 2000),
-    created_at timestamptz not null default now()
+    body text not null,
+    image_path text,
+    created_at timestamptz not null default now(),
+    check (image_path is not null or length(trim(body)) between 1 and 2000)
 );
+
+alter table public.messages add column if not exists image_path text;
+alter table public.messages drop constraint if exists messages_body_check;
+alter table public.messages drop constraint if exists messages_check;
+alter table public.messages add constraint messages_content_check
+    check (image_path is not null or length(trim(body)) between 1 and 2000);
 
 create table if not exists public.abuse_reports (
     id uuid primary key default gen_random_uuid(),
@@ -138,6 +163,13 @@ insert into storage.buckets (id, name, public)
 values ('profile-avatars', 'profile-avatars', false)
 on conflict (id) do update set public = excluded.public;
 
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('chat-images', 'chat-images', false, 5242880, array['image/jpeg', 'image/png', 'image/webp'])
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = 5242880,
+    allowed_mime_types = array['image/jpeg', 'image/png', 'image/webp'];
+
 grant usage on schema public to anon, authenticated;
 revoke all on public.reports from anon;
 grant select on public.reports to authenticated;
@@ -146,8 +178,9 @@ grant select, insert on public.conversations to authenticated;
 grant select, insert on public.messages to authenticated;
 revoke all on public.abuse_reports from anon, authenticated;
 grant insert on public.abuse_reports to authenticated;
-grant select on public.profiles to authenticated;
-grant update (display_name, avatar_path) on public.profiles to authenticated;
+revoke select on public.profiles from authenticated;
+grant select (id, display_name, avatar_path, created_at) on public.profiles to authenticated;
+grant update (display_name, avatar_path, whatsapp_phone) on public.profiles to authenticated;
 grant select on public.profile_ratings to authenticated;
 grant insert (conversation_id, rater_id, rated_user_id, stars) on public.profile_ratings to authenticated;
 
@@ -266,6 +299,56 @@ create policy "Users can delete their own profile avatars"
         and (storage.foldername(name))[1] = (select auth.uid())::text
     );
 
+drop policy if exists "Participants can read chat images" on storage.objects;
+create policy "Participants can read chat images"
+    on storage.objects for select to authenticated
+    using (
+        bucket_id = 'chat-images'
+        and exists (
+            select 1
+            from public.conversations
+            where conversations.id::text = (storage.foldername(name))[1]
+              and (
+                  conversations.owner_id = (select auth.uid())
+                  or conversations.visitor_id = (select auth.uid())
+              )
+        )
+    );
+
+drop policy if exists "Participants can upload chat images" on storage.objects;
+create policy "Participants can upload chat images"
+    on storage.objects for insert to authenticated
+    with check (
+        bucket_id = 'chat-images'
+        and (storage.foldername(name))[2] = (select auth.uid())::text
+        and exists (
+            select 1
+            from public.conversations
+            where conversations.id::text = (storage.foldername(name))[1]
+              and (
+                  conversations.owner_id = (select auth.uid())
+                  or conversations.visitor_id = (select auth.uid())
+              )
+        )
+    );
+
+drop policy if exists "Participants can delete their chat images" on storage.objects;
+create policy "Participants can delete their chat images"
+    on storage.objects for delete to authenticated
+    using (
+        bucket_id = 'chat-images'
+        and (storage.foldername(name))[2] = (select auth.uid())::text
+        and exists (
+            select 1
+            from public.conversations
+            where conversations.id::text = (storage.foldername(name))[1]
+              and (
+                  conversations.owner_id = (select auth.uid())
+                  or conversations.visitor_id = (select auth.uid())
+              )
+        )
+    );
+
 drop policy if exists "Participants can read conversations" on public.conversations;
 create policy "Participants can read conversations"
     on public.conversations for select
@@ -347,14 +430,18 @@ security definer
 set search_path = public, pg_temp
 as $$
 begin
-    insert into public.profiles (id, display_name)
+    insert into public.profiles (id, display_name, whatsapp_phone)
     values (
         new.id,
         left(coalesce(
             nullif(new.raw_user_meta_data->>'display_name', ''),
             nullif(split_part(coalesce(new.email, ''), '@', 1), ''),
             'Usuário'
-        ), 40)
+        ), 40),
+        case
+            when new.raw_user_meta_data->>'whatsapp_phone' ~ '^\+[1-9][0-9]{9,14}$'
+            then new.raw_user_meta_data->>'whatsapp_phone'
+        end
     )
     on conflict (id) do nothing;
     return new;
@@ -365,6 +452,48 @@ drop trigger if exists auth_user_created_profile on auth.users;
 create trigger auth_user_created_profile
     after insert on auth.users
     for each row execute function public.create_profile_for_new_user();
+
+create or replace function public.get_my_whatsapp_phone()
+returns text
+language sql
+stable
+security definer
+set search_path = public, auth, pg_temp
+as $$
+    select whatsapp_phone
+    from public.profiles
+    where id = auth.uid()
+$$;
+
+revoke all on function public.get_my_whatsapp_phone() from public, anon;
+grant execute on function public.get_my_whatsapp_phone() to authenticated;
+
+create or replace function public.get_conversation_contact(p_conversation_id uuid)
+returns table (display_name text, email text, whatsapp_phone text)
+language sql
+stable
+security definer
+set search_path = public, auth, pg_temp
+as $$
+    select p.display_name,
+           case when u.email_confirmed_at is not null then u.email end,
+           case
+               when u.phone_confirmed_at is not null and u.phone = p.whatsapp_phone
+               then p.whatsapp_phone
+           end
+    from public.conversations c
+    join public.profiles p
+      on p.id = case
+          when c.owner_id = auth.uid() then c.visitor_id
+          else c.owner_id
+      end
+    join auth.users u on u.id = p.id
+    where c.id = p_conversation_id
+      and auth.uid() in (c.owner_id, c.visitor_id)
+$$;
+
+revoke all on function public.get_conversation_contact(uuid) from public, anon;
+grant execute on function public.get_conversation_contact(uuid) to authenticated;
 
 do $$
 begin
